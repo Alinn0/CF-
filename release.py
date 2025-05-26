@@ -319,6 +319,10 @@ class MacroApp(QWidget):
                 if has_dps:
                     self.handle_dps_found()
                 else:
+                    con_png = self.check_image(configuration, configuration_region)
+                    if con_png:
+                        self.safe_click(960, 785, "确认")
+                        pydirectinput.press('r')
                     self.handle_no_dps()
 
                 # 可中断的等待
@@ -363,13 +367,12 @@ class MacroApp(QWidget):
 
     def handle_dps_found(self):
         """发现DPS时的处理逻辑"""
-        self.log_signal.emit("[检测] DPS存在")
-        if not self.mouse_down.is_set():
-            self._mouse_left_down()
+        self._mouse_left_down()
+        pydirectinput.press('f')
 
     def handle_no_dps(self):
         """未发现DPS时的处理逻辑"""
-        self.log_signal.emit("[检测] DPS不存在")
+        #self.log_signal.emit("[检测] DPS不存在")
         if self.mouse_down.is_set():
             self._mouse_left_up()
         
@@ -434,26 +437,32 @@ class MacroApp(QWidget):
         """执行预定义的操作序列"""
         try:
             self.log_signal.emit("[操作] 开始执行序列")
-            
-            # 步骤1：发送R键
-            pydirectinput.press('r')
-            time.sleep(0.1)
-            
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            if has_dps:
+                return
             # 步骤2：发送E键
             pyautogui.press('e')
             time.sleep(0.1)
-            
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            if has_dps:
+                return
             # 步骤3：选择星级
             star_index = STAR_LEVELS.index(self.cmb_star.findChild(QComboBox).currentText())
             self.safe_click(590 + star_index * 150, 367, "星级")
-            
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            if has_dps:
+                return
             # 步骤4：选择动作类型
             type_index = ACTION_TYPES.index(self.cmb_type.findChild(QComboBox).currentText())
             self.safe_click(630 + type_index * 200, 540, "类型")
-            
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            if has_dps:
+                return
             # 步骤5：确认操作
             self.safe_click(1326, 804, "确认")
-            
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            if has_dps:
+                return
             self.log_signal.emit("[操作] 序列执行完成")
             
         except Exception as e:
