@@ -326,7 +326,7 @@ class MacroApp(QWidget):
                     self.handle_no_dps()
 
                 # 可中断的等待
-                self.interruptible_sleep(0.5)
+                self.interruptible_sleep(0.01)
                 
             except Exception as e:
                 self.log_signal.emit(f"[错误] 循环异常: {str(e)}")
