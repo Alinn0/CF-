@@ -57,6 +57,7 @@ class MacroApp(QWidget):
         self._exec_lock = threading.Lock()
         
         # 状态控制事件
+        self.shoot_event = threading.Event() 
         self.run_event = threading.Event()         # 自动循环运行标志
         self.loop_event = threading.Event()       # DPS检测循环标志（新增）
         self.mouse_down = threading.Event()        # 鼠标左键按下状态
@@ -165,6 +166,8 @@ class MacroApp(QWidget):
                 self.handle_f11()
             elif key == Key.f12:
                 self.handle_f12()
+            elif key == Key.f9:
+                self.handl_f9()
             
             # 处理用户配置的触发键
             self.check_trigger_hotkey(key, pressed=True)
@@ -264,6 +267,11 @@ class MacroApp(QWidget):
         if self.loop_event.is_set():
             self.loop_event.clear()
             self.log_signal.emit("[系统] 已退出DPS检测模式")
+
+        if self.shoot_event.is_set():
+            self.shoot_event.clear()
+            self.log_signal.emit("[系统] 已退出自动开枪模式")
+        time.sleep(0.1)  # 确保状态切换稳定
         
         # 切换自动循环状态
         if not self.run_event.is_set():
@@ -277,12 +285,32 @@ class MacroApp(QWidget):
         if self.run_event.is_set():
             self.run_event.clear()
             self.log_signal.emit("[系统] 已退出自动循环模式")
-        
+        if self.shoot_event.is_set():
+            self.shoot_event.clear()
+            self.log_signal.emit("[系统] 已退出自动开枪模式")
+        time.sleep(0.1)  # 确保状态切换稳定
         # 切换检测循环状态
         if not self.loop_event.is_set():
             self.start_detection_loop()
         else:
             self.stop_detection_loop()
+
+    def handl_f9(self):
+        """F9键处理：切换自动开枪状态"""
+        if self.loop_event.is_set():
+            self.loop_event.clear()
+            self.log_signal.emit("[系统] 已退出DPS检测模式")
+        if self.run_event.is_set():
+            self.run_event.clear()
+            self.log_signal.emit("[系统] 已退出自动循环模式")
+        time.sleep(0.1)  # 确保状态切换稳定
+        if not self.shoot_event.is_set():
+            self.shoot_event.set()
+            self.log_signal.emit("[系统] 自动开枪模式启动")
+            threading.Thread(target=self.Shoot_Mode, daemon=True).start()
+        else:
+            self.shoot_event.clear()
+            self._mouse_left_up(force=True)
 
     def start_auto_cycle(self):
         """启动自动循环模式"""
@@ -307,6 +335,21 @@ class MacroApp(QWidget):
         self._mouse_left_up(force=True)  # 确保释放鼠标
         self.log_signal.emit("[系统] DPS检测循环停止")
 
+    def Shoot_Mode(self):
+        """自动开枪模式工作线程"""
+        first_state = True  
+        try:
+            self._mouse_left_down()
+            if first_state:
+                first_state = False
+                self.log_signal.emit("[系统] 自动开枪模式已启动")
+        except Exception as e:
+            self.log_signal.emit(f"[错误] 自动开枪异常: {str(e)}")
+            self.shoot_event.clear()
+            self._mouse_left_up(force=True)
+
+            #time.sleep(0.1)  # 控制开枪频率
+               
     # ------------------------- 自动循环逻辑 -------------------------
     def auto_cycle_worker(self):
         """自动循环工作线程"""
