@@ -90,7 +90,7 @@ class MacroApp(QWidget):
         btn_save.clicked.connect(self.save_config)
 
         # 操作提示标签
-        lbl_tip = QLabel("快捷操作:\n• F11: 自动放卡开枪\n• F12: 循环检测DPS自动开枪\n（模式互斥，即时响应）")
+        lbl_tip = QLabel("触发按键: 触发一次自动放卡\n•F9: 自动开枪模式\n•F11: 自动放卡开枪\n•F12: 循环检测DPS自动开枪\n ")
         lbl_tip.setStyleSheet("color: #666; font-style: italic; padding: 8px 0;")
 
         # 日志显示框
