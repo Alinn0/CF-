@@ -6,7 +6,7 @@
 3. 新增循环检测线程
 4. 优化模式互斥逻辑
 """
-
+from PyQt5.QtWidgets import QCheckBox
 import sys
 import json
 import threading
@@ -84,11 +84,12 @@ class MacroApp(QWidget):
         self.cmb_star = self.create_combobox("星级选择:", STAR_LEVELS, "star")
         self.cmb_type = self.create_combobox("动作类型:", ACTION_TYPES, "action_type")
         self.cmb_trigger = self.create_combobox("触发键:", TRIGGER_OPTIONS, "trigger")
-
+        
         # 保存按钮
         btn_save = QPushButton("保存配置", self)
         btn_save.clicked.connect(self.save_config)
-
+        self.hold_left_btn_check = QCheckBox("放一次卡之后保持开火", self)
+        layout.addWidget(self.hold_left_btn_check)
         # 操作提示标签
         lbl_tip = QLabel("触发按键: 触发一次自动放卡\n•F9: 自动开枪模式\n•F11: 自动放卡开枪\n•F12: 循环检测DPS自动开枪\n ")
         lbl_tip.setStyleSheet("color: #666; font-style: italic; padding: 8px 0;")
@@ -325,7 +326,7 @@ class MacroApp(QWidget):
             threading.Thread(target=self.Shoot_Mode, daemon=True).start()
         else:
             self.shoot_event.clear()
-            self._mouse_left_up(force=True)
+            pyautogui.mouseUp(button='left')
 
     def start_auto_cycle(self):
         """启动自动循环模式"""
@@ -352,16 +353,18 @@ class MacroApp(QWidget):
 
     def Shoot_Mode(self):
         """自动开枪模式工作线程"""
-        first_state = True  
-        try:
-            self._mouse_left_down()
-            if first_state:
-                first_state = False
-                self.log_signal.emit("[系统] 自动开枪模式已启动")
-        except Exception as e:
-            self.log_signal.emit(f"[错误] 自动开枪异常: {str(e)}")
-            self.shoot_event.clear()
-            self._mouse_left_up(force=True)
+        while self.shoot_event.is_set():
+            first_state = True  
+            try:
+                pyautogui.mouseDown(button='left')
+                pydirectinput.press('f')
+                if first_state:
+                    first_state = False
+                    self.log_signal.emit("[系统] 自动开枪模式已启动")
+            except Exception as e:
+                self.log_signal.emit(f"[错误] 自动开枪异常: {str(e)}")
+                self.shoot_event.clear()
+                pyautogui.mouseUp(button='left')
 
             #time.sleep(0.1)  # 控制开枪频率
                
@@ -401,10 +404,10 @@ class MacroApp(QWidget):
                 if current_has_dps != last_has_dps:
                     if current_has_dps:
                         self.log_signal.emit("DPS检测到，按下鼠标")
-                        self._mouse_left_down()
+                        pyautogui.mouseDown(button='left')
                     else:
                         self.log_signal.emit("DPS未检测到，抬起鼠标")
-                        self._mouse_left_up()
+                        pyautogui.mouseUp(button='left')
                     last_has_dps = current_has_dps  # 更新状态记录
 
                 # 无论状态是否变化，DPS未检测到时都检查配置（原逻辑保留）
@@ -482,7 +485,7 @@ class MacroApp(QWidget):
             return pyautogui.locateOnScreen(
                 Image,
                 region=Region,
-                confidence=0.5,    # 匹配置信度阈值
+                confidence=0.3,    # 匹配置信度阈值
                 grayscale=True     # 灰度匹配提升性能
             ) is not None
         except Exception as e:
@@ -522,6 +525,9 @@ class MacroApp(QWidget):
             if has_dps:
                 return
             self.log_signal.emit("[操作] 序列执行完成")
+            if self.hold_left_btn_check.isChecked():
+                self.log_signal.emit("[操作] 检测到保持左键选项，触发按下")
+                pyautogui.mouseDown(button='left')
             
         except Exception as e:
             self.log_signal.emit(f"[错误] 执行失败: {str(e)}")
