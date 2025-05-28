@@ -32,8 +32,8 @@ def is_admin():
 
 # 常量定义
 STAR_LEVELS = ["一星", "二星", "三星", "四星", "五星", "六星"]  # 星级选项
-ACTION_TYPES = ["第一种", "第二种", "第三种", "第四种", "第五种"]  # 动作类型选项
-TRIGGER_OPTIONS = ["F1", "F2", "F3", "Ctrl+Shift+A", "Alt+Space", "鼠标侧键1", "鼠标侧键2"]  # 触发键选项
+ACTION_TYPES = ["第一张", "第二张", "第三张", "第四张", "第五张"]  # 动作类型选项
+TRIGGER_OPTIONS = ["未配置", "鼠标侧键1", "鼠标侧键2"]  # 触发键选项
 DPS_IMAGE = 'dps.png'  # DPS检测用图片文件名
 DPS_REGION = (613, 141, 63, 12)  # DPS检测区域(x, y, width, height)
 configuration='configuration.png'
@@ -190,6 +190,11 @@ class MacroApp(QWidget):
         :return: 是否触发操作
         """
         trigger = self.config.get("trigger", "F1")
+        
+        # 新增未配置判断
+        if trigger == "未配置":
+            return False  # 未配置时直接返回不处理
+        
         if trigger.startswith("鼠标"):
             return False
 
@@ -209,6 +214,16 @@ class MacroApp(QWidget):
                 threading.Thread(target=self.execute_sequence, daemon=True).start()
             return True
         return False
+
+    # 修改update_hotkey_state方法（在信号与监听部分）
+    def update_hotkey_state(self):
+        """初始化热键状态跟踪字典"""
+        trigger = self.config.get("trigger", "F1")
+        if trigger == "未配置":
+            self.hotkeys = {}  # 清空热键状态
+        elif not trigger.startswith("鼠标"):
+            parsed = self.parse_hotkey(trigger)
+            self.hotkeys = {k: False for k in HotKey.parse(parsed)}
 
     def get_key_str(self, key):
         """将按键转换为标准化字符串"""
@@ -545,7 +560,12 @@ class MacroApp(QWidget):
             
             # 监听器更新逻辑
             if self.config["trigger"] != old_trigger:
-                if self.config["trigger"].startswith("鼠标"):
+                if self.config["trigger"] == "未配置":
+                    # 停止所有监听器
+                    if self.mouse_listener:
+                        self.mouse_listener.stop()
+                    self.key_listener.stop()
+                elif self.config["trigger"].startswith("鼠标"):
                     self.start_mouse_listener()
                     self.key_listener.stop()
                 else:
@@ -557,7 +577,7 @@ class MacroApp(QWidget):
                     )
                     self.key_listener.start()
                 self.update_hotkey_state()
-            
+                
         except Exception as e:
             self.log_signal.emit(f"[错误] 保存失败: {str(e)}")
 
