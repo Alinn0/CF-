@@ -13,7 +13,7 @@ import threading
 import time
 import ctypes
 import os
-from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QComboBox,
+from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
                             QPushButton, QLabel, QTextEdit)
 from PyQt5.QtCore import Qt, pyqtSignal
 from pynput import keyboard, mouse
@@ -89,6 +89,12 @@ class MacroApp(QWidget):
         btn_save = QPushButton("保存配置", self)
         btn_save.clicked.connect(self.save_config)
         self.hold_left_btn_check = QCheckBox("放一次卡之后保持开火", self)
+        self.F11_only_release = QCheckBox("F11纯放卡", self)
+
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.addWidget(self.hold_left_btn_check)
+        checkbox_layout.addWidget(self.F11_only_release)
+        layout.addLayout(checkbox_layout)
         layout.addWidget(self.hold_left_btn_check)
         # 操作提示标签
         lbl_tip = QLabel("触发按键: 触发一次自动放卡\n•F9: 自动开枪模式\n•F11: 自动放卡开枪\n•F12: 循环检测DPS自动开枪\n ")
@@ -373,18 +379,34 @@ class MacroApp(QWidget):
         """自动循环工作线程"""
         while self.run_event.is_set():
             try:
-                # DPS检测
-                has_dps = self.check_image(DPS_IMAGE,DPS_REGION)
+                if  self.F11_only_release.isChecked():
+                    self.log_signal.emit("[操作] 纯放卡开始")
+                    # 如果F11纯放卡选项被选中，直接释放鼠标
+                    pyautogui.press('e')
+                    time.sleep(0.1)
+                     # 步骤3：选择星级
+                    star_index = STAR_LEVELS.index(self.cmb_star.findChild(QComboBox).currentText())
+                    self.safe_click(590 + star_index * 150, 367, "星级")
+                    # 步骤4：选择动作类型
+                    type_index = ACTION_TYPES.index(self.cmb_type.findChild(QComboBox).currentText())
+                    self.safe_click(630 + type_index * 200, 540, "类型")
+                    # 步骤5：确认操作
+                    self.safe_click(1326, 804, "确认")
+                    self.log_signal.emit("[操作] 纯放卡执行完成")
                 
-                # 根据检测结果处理
-                if has_dps:
-                    self.handle_dps_found()
-                else:
-                    con_png = self.check_image(configuration, configuration_region)
-                    if con_png:
-                        self.safe_click(960, 785, "确认")
-                        pydirectinput.press('r')
-                    self.handle_no_dps()
+                else :
+                    # DPS检测
+                    has_dps = self.check_image(DPS_IMAGE,DPS_REGION)
+                
+                    # 根据检测结果处理
+                    if has_dps:
+                        self.handle_dps_found()
+                    else:
+                        con_png = self.check_image(configuration, configuration_region)
+                        if con_png:
+                            self.safe_click(960, 785, "确认")
+                            pydirectinput.press('r')
+                        self.handle_no_dps()
 
                 # 可中断的等待
                 self.interruptible_sleep(0.01)
