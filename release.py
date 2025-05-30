@@ -38,6 +38,8 @@ DPS_IMAGE = 'dps.png'  # DPS检测用图片文件名
 DPS_REGION = (613, 141, 63, 12)  # DPS检测区域(x, y, width, height)
 configuration='configuration.png'
 configuration_region=(850, 760, 200, 40) #区域
+R5='5.png'
+R5_region=(944, 432, 21, 6) #区域
 
 # 主应用类
 class MacroApp(QWidget):
@@ -90,12 +92,13 @@ class MacroApp(QWidget):
         btn_save.clicked.connect(self.save_config)
         self.hold_left_btn_check = QCheckBox("放一次卡之后保持开火", self)
         self.F11_only_release = QCheckBox("F11纯放卡", self)
+        self.R5 = QCheckBox("检测5换弹", self)
 
         checkbox_layout = QHBoxLayout()
         checkbox_layout.addWidget(self.hold_left_btn_check)
         checkbox_layout.addWidget(self.F11_only_release)
+        checkbox_layout.addWidget(self.R5)
         layout.addLayout(checkbox_layout)
-        layout.addWidget(self.hold_left_btn_check)
         # 操作提示标签
         lbl_tip = QLabel("触发按键: 触发一次自动放卡\n•F9: 自动开枪模式\n•F11: 自动放卡开枪\n•F12: 循环检测DPS自动开枪\n ")
         lbl_tip.setStyleSheet("color: #666; font-style: italic; padding: 8px 0;")
@@ -402,10 +405,19 @@ class MacroApp(QWidget):
                     if has_dps:
                         self.handle_dps_found()
                     else:
-                        con_png = self.check_image(configuration, configuration_region)
-                        if con_png:
-                            self.safe_click(960, 785, "确认")
-                            pydirectinput.press('r')
+                        if self.R5.isChecked():
+                            # 检测5换弹
+                            has_r5 = self.check_image(R5, R5_region)
+                            if has_r5:
+                                pydirectinput.press('r')
+                            con_png = self.check_image(configuration, configuration_region)
+                            if con_png:
+                                self.safe_click(960, 785, "确认")
+                        else:
+                            con_png = self.check_image(configuration, configuration_region)
+                            if con_png:
+                                self.safe_click(960, 785, "确认")
+                                pydirectinput.press('r')
                         self.handle_no_dps()
 
                 # 可中断的等待
@@ -431,19 +443,23 @@ class MacroApp(QWidget):
                         self.log_signal.emit("DPS未检测到，抬起鼠标")
                         pyautogui.mouseUp(button='left')
                     last_has_dps = current_has_dps  # 更新状态记录
-
+                
                 # 无论状态是否变化，DPS未检测到时都检查配置（原逻辑保留）
                 if not current_has_dps:
-                    con_png = self.check_image(configuration, configuration_region)
-                    if con_png:
-                        self.safe_click(960, 785, "确认")
-                        pydirectinput.press('r')
+                    if self.R5.isChecked():
+                    # 检测5换弹
+                        has_r5 = self.check_image(R5, R5_region)
+                        if has_r5:
+                            pydirectinput.press('r')
+                        con_png = self.check_image(configuration, configuration_region)
+                        if con_png:
+                            self.safe_click(960, 785, "确认")
+                    else:
+                        con_png = self.check_image(configuration, configuration_region)
+                        if con_png:
+                            self.safe_click(960, 785, "确认")
+                            pydirectinput.press('r')
 
-                # 非阻塞等待（原逻辑保留）
-                for _ in range(10):
-                    if not self.loop_event.is_set():
-                        return
-                    time.sleep(0.05)
             except Exception as e:
                     self.log_signal.emit(f"[错误] 检测循环异常: {str(e)}")
                     self.stop_detection_loop()
