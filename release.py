@@ -420,9 +420,9 @@ class MacroApp(QWidget):
                             self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
                             self.log_signal.emit("执行一次换弹")
                             pydirectinput.press('r')
-                            time.sleep(1)  # 确保鼠标释放稳定
+                            time.sleep(0.1)  # 确保鼠标释放稳定
                             pydirectinput.press('r')
-                            time.sleep(1)  # 确保换弹稳定
+                            time.sleep(0.1)  # 确保换弹稳定
                             pydirectinput.press('r')
                         last_dps_state = has_dps
                     
@@ -470,9 +470,9 @@ class MacroApp(QWidget):
                         self.log_signal.emit("DPS未检测到，抬起鼠标")
                         self.log_signal.emit("执行一次换弹")
                         pydirectinput.press('r')
-                        time.sleep(1)  # 确保鼠标释放稳定
+                        time.sleep(0.1)  # 确保鼠标释放稳定
                         pydirectinput.press('r') 
-                        time.sleep(1)  # 确保换弹稳定
+                        time.sleep(0.1)  # 确保换弹稳定
                         pydirectinput.press('r')
                     last_has_dps = current_has_dps  # 更新状态记录
                 
