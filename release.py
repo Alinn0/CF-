@@ -92,12 +92,12 @@ class MacroApp(QWidget):
         btn_save.clicked.connect(self.save_config)
         self.hold_left_btn_check = QCheckBox("放一次卡之后保持开火", self)
         self.F11_only_release = QCheckBox("F11纯放卡", self)
-        self.R5 = QCheckBox("检测5换弹", self)
+        #self.R5 = QCheckBox("检测5换弹", self)
 
         checkbox_layout = QHBoxLayout()
         checkbox_layout.addWidget(self.hold_left_btn_check)
         checkbox_layout.addWidget(self.F11_only_release)
-        checkbox_layout.addWidget(self.R5)
+        #checkbox_layout.addWidget(self.R5)
         layout.addLayout(checkbox_layout)
         # 操作提示标签
         lbl_tip = QLabel("触发按键: 触发一次自动放卡\n•F9: 自动开枪模式\n•F11: 自动放卡开枪\n•F12: 循环检测DPS自动开枪\n ")
@@ -380,14 +380,16 @@ class MacroApp(QWidget):
     # ------------------------- 自动循环逻辑 -------------------------
     def auto_cycle_worker(self):
         """自动循环工作线程"""
+        last_dps_state = None  # 记录上一次的DPS状态
+        
         while self.run_event.is_set():
             try:
-                if  self.F11_only_release.isChecked():
+                if self.F11_only_release.isChecked():
                     self.log_signal.emit("[操作] 纯放卡开始")
                     # 如果F11纯放卡选项被选中，直接释放鼠标
                     pyautogui.press('e')
                     time.sleep(0.1)
-                     # 步骤3：选择星级
+                    # 步骤3：选择星级
                     star_index = STAR_LEVELS.index(self.cmb_star.findChild(QComboBox).currentText())
                     self.safe_click(590 + star_index * 150, 367, "星级")
                     # 步骤4：选择动作类型
@@ -397,31 +399,55 @@ class MacroApp(QWidget):
                     self.safe_click(1326, 804, "确认")
                     self.log_signal.emit("[操作] 纯放卡执行完成")
                 
-                else :
+                else:
                     # DPS检测
-                    has_dps = self.check_image(DPS_IMAGE,DPS_REGION)
-                
+                    has_dps = self.check_image(DPS_IMAGE, DPS_REGION, 0.6)
+                    
+                    # 只在DPS状态变化时打印日志
+                    if last_dps_state is None:
+                        # 首次检测
+                        if has_dps:
+                            self.log_signal.emit("[检测] DPS已存在，按下鼠标")
+                        else:
+                            self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
+                        last_dps_state = has_dps
+                    elif last_dps_state != has_dps:
+                        # 状态发生变化
+                        if has_dps:
+                            self.log_signal.emit("[检测] DPS已存在，按下鼠标")
+                        else:
+                            pyautogui.mouseUp(button='left')
+                            self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
+                            self.log_signal.emit("执行一次换弹")
+                            pydirectinput.press('r')
+                            time.sleep(1)  # 确保鼠标释放稳定
+                            pydirectinput.press('r')
+                            time.sleep(1)  # 确保换弹稳定
+                            pydirectinput.press('r')
+                        last_dps_state = has_dps
+                    
                     # 根据检测结果处理
                     if has_dps:
                         self.handle_dps_found()
                     else:
-                        if self.R5.isChecked():
-                            # 检测5换弹
-                            has_r5 = self.check_image(R5, R5_region)
-                            if has_r5:
-                                pydirectinput.press('r')
-                            con_png = self.check_image(configuration, configuration_region)
-                            if con_png:
-                                self.safe_click(960, 785, "确认")
-                        else:
-                            con_png = self.check_image(configuration, configuration_region)
-                            if con_png:
-                                self.safe_click(960, 785, "确认")
-                                pydirectinput.press('r')
+                        # if self.R5.isChecked():
+                        #     # 检测5换弹
+                        #     has_r5 = self.check_image(R5, R5_region, 0.3)
+                        #     if has_r5:
+                        #         self.log_signal.emit("[检测] 执行换弹")
+                        #         pydirectinput.press('r')
+                        #     con_png = self.check_image(configuration, configuration_region, 0.3)
+                        #     if con_png:
+                        #         self.safe_click(960, 785, "确认")
+                        # else:
+                        con_png = self.check_image(configuration, configuration_region, 0.3)
+                        if con_png:
+                            self.safe_click(960, 785, "确认")
+                        #pydirectinput.press('r')
                         self.handle_no_dps()
-
+                
                 # 可中断的等待
-                self.interruptible_sleep(0.01)
+                # self.interruptible_sleep(0.01)
                 
             except Exception as e:
                 self.log_signal.emit(f"[错误] 循环异常: {str(e)}")
@@ -432,7 +458,7 @@ class MacroApp(QWidget):
         last_has_dps = None  # 用于记录上一次的DPS状态
         while self.loop_event.is_set():
             try:
-                current_has_dps = self.check_image(DPS_IMAGE, DPS_REGION)
+                current_has_dps = self.check_image(DPS_IMAGE, DPS_REGION,0.6)
             
                 # 仅在状态变化时操作并打印log
                 if current_has_dps != last_has_dps:
@@ -440,25 +466,22 @@ class MacroApp(QWidget):
                         self.log_signal.emit("DPS检测到，按下鼠标")
                         pyautogui.mouseDown(button='left')
                     else:
-                        self.log_signal.emit("DPS未检测到，抬起鼠标")
                         pyautogui.mouseUp(button='left')
+                        self.log_signal.emit("DPS未检测到，抬起鼠标")
+                        self.log_signal.emit("执行一次换弹")
+                        pydirectinput.press('r')
+                        time.sleep(1)  # 确保鼠标释放稳定
+                        pydirectinput.press('r') 
+                        time.sleep(1)  # 确保换弹稳定
+                        pydirectinput.press('r')
                     last_has_dps = current_has_dps  # 更新状态记录
                 
-                # 无论状态是否变化，DPS未检测到时都检查配置（原逻辑保留）
+                # 检测确认按钮图片
                 if not current_has_dps:
-                    if self.R5.isChecked():
-                    # 检测5换弹
-                        has_r5 = self.check_image(R5, R5_region)
-                        if has_r5:
-                            pydirectinput.press('r')
-                        con_png = self.check_image(configuration, configuration_region)
+                        con_png = self.check_image(configuration, configuration_region,0.3)
                         if con_png:
                             self.safe_click(960, 785, "确认")
-                    else:
-                        con_png = self.check_image(configuration, configuration_region)
-                        if con_png:
-                            self.safe_click(960, 785, "确认")
-                            pydirectinput.press('r')
+                            #pydirectinput.press('r')
 
             except Exception as e:
                     self.log_signal.emit(f"[错误] 检测循环异常: {str(e)}")
@@ -517,13 +540,13 @@ class MacroApp(QWidget):
                 self.log_signal.emit(f"[错误] 释放失败: {str(e)}")
 
     # ------------------------- 图像检测 -------------------------
-    def check_image(self,Image,Region):
+    def check_image(self,Image,Region,confid):
         """使用pyautogui进行屏幕截图检测"""
         try:
             return pyautogui.locateOnScreen(
                 Image,
                 region=Region,
-                confidence=0.3,    # 匹配置信度阈值
+                confidence=confid,    # 匹配置信度阈值
                 grayscale=True     # 灰度匹配提升性能
             ) is not None
         except Exception as e:
@@ -536,30 +559,30 @@ class MacroApp(QWidget):
         """执行预定义的操作序列"""
         try:
             self.log_signal.emit("[操作] 开始执行序列")
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
             if has_dps:
                 return
             # 步骤2：发送E键
             pyautogui.press('e')
             time.sleep(0.1)
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
             if has_dps:
                 return
             # 步骤3：选择星级
             star_index = STAR_LEVELS.index(self.cmb_star.findChild(QComboBox).currentText())
             self.safe_click(590 + star_index * 150, 367, "星级")
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
             if has_dps:
                 return
             # 步骤4：选择动作类型
             type_index = ACTION_TYPES.index(self.cmb_type.findChild(QComboBox).currentText())
             self.safe_click(630 + type_index * 200, 540, "类型")
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
             if has_dps:
                 return
             # 步骤5：确认操作
             self.safe_click(1326, 804, "确认")
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION)   
+            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
             if has_dps:
                 return
             self.log_signal.emit("[操作] 序列执行完成")
