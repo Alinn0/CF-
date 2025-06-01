@@ -38,8 +38,8 @@ DPS_IMAGE = 'dps.png'  # DPS检测用图片文件名
 DPS_REGION = (613, 141, 63, 12)  # DPS检测区域(x, y, width, height)
 configuration='configuration.png'
 configuration_region=(850, 760, 200, 40) #区域
-R5='5.png'
-R5_region=(944, 432, 21, 6) #区域
+#R5='5.png'
+#R5_region=(944, 432, 21, 6) #区域
 
 # 主应用类
 class MacroApp(QWidget):
