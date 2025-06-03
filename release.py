@@ -21,6 +21,7 @@ from pynput.mouse import Button as MouseButton
 from pynput.keyboard import HotKey, Key
 import pyautogui
 import pydirectinput
+import random
 
 # 管理员权限检查函数
 def is_admin():
@@ -40,6 +41,8 @@ configuration='configuration.png'
 configuration_region=(850, 760, 200, 40) #区域
 #R5='5.png'
 #R5_region=(944, 432, 21, 6) #区域
+def random_delay():
+    time.sleep(random.uniform(0.10, 0.30))
 
 # 主应用类
 class MacroApp(QWidget):
@@ -313,7 +316,7 @@ class MacroApp(QWidget):
         if self.shoot_event.is_set():
             self.shoot_event.clear()
             self.log_signal.emit("[系统] 已退出自动开枪模式")
-        time.sleep(0.1)  # 确保状态切换稳定
+        time.sleep(0.1)   # 确保状态切换稳定
         # 切换检测循环状态
         if not self.loop_event.is_set():
             self.start_detection_loop()
@@ -328,7 +331,7 @@ class MacroApp(QWidget):
         if self.run_event.is_set():
             self.run_event.clear()
             self.log_signal.emit("[系统] 已退出自动循环模式")
-        time.sleep(0.1)  # 确保状态切换稳定
+        time.sleep(0.1)   # 确保状态切换稳定
         if not self.shoot_event.is_set():
             self.shoot_event.set()
             self.log_signal.emit("[系统] 自动开枪模式启动")
@@ -375,7 +378,7 @@ class MacroApp(QWidget):
                 self.shoot_event.clear()
                 pyautogui.mouseUp(button='left')
 
-            #time.sleep(0.1)  # 控制开枪频率
+            #random_delay()(0.1)  # 控制开枪频率
                
     # ------------------------- 自动循环逻辑 -------------------------
     def auto_cycle_worker(self):
@@ -388,7 +391,7 @@ class MacroApp(QWidget):
                     self.log_signal.emit("[操作] 纯放卡开始")
                     # 如果F11纯放卡选项被选中，直接释放鼠标
                     pyautogui.press('e')
-                    time.sleep(0.1)
+                    random_delay()
                     # 步骤3：选择星级
                     star_index = STAR_LEVELS.index(self.cmb_star.findChild(QComboBox).currentText())
                     self.safe_click(590 + star_index * 150, 367, "星级")
@@ -420,9 +423,9 @@ class MacroApp(QWidget):
                             self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
                             self.log_signal.emit("执行一次换弹")
                             pydirectinput.press('r')
-                            time.sleep(0.1)  # 确保鼠标释放稳定
+                            random_delay()  # 确保鼠标释放稳定
                             pydirectinput.press('r')
-                            time.sleep(0.1)  # 确保换弹稳定
+                            random_delay()  # 确保换弹稳定
                             pydirectinput.press('r')
                         last_dps_state = has_dps
                     
@@ -470,9 +473,9 @@ class MacroApp(QWidget):
                         self.log_signal.emit("DPS未检测到，抬起鼠标")
                         self.log_signal.emit("执行一次换弹")
                         pydirectinput.press('r')
-                        time.sleep(0.1)  # 确保鼠标释放稳定
+                        random_delay()  # 确保鼠标释放稳定
                         pydirectinput.press('r') 
-                        time.sleep(0.1)  # 确保换弹稳定
+                        random_delay()  # 确保换弹稳定
                         pydirectinput.press('r')
                     last_has_dps = current_has_dps  # 更新状态记录
                 
@@ -515,7 +518,7 @@ class MacroApp(QWidget):
         while time.time() - start < duration:
             if not self.run_event.is_set():
                 return False
-            time.sleep(0.05)
+            random_delay()
         return True
 
     # ------------------------- 鼠标控制 -------------------------
@@ -564,7 +567,7 @@ class MacroApp(QWidget):
                 return
             # 步骤2：发送E键
             pyautogui.press('e')
-            time.sleep(0.1)
+            random_delay()
             has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
             if has_dps:
                 return
@@ -603,7 +606,7 @@ class MacroApp(QWidget):
         """
         try:
             #original_pos = pyautogui.position()  # 保存原始位置
-            pyautogui.moveTo(x, y, duration=0.1) # 缓慢移动防止检测
+            pyautogui.moveTo(x, y, duration=random.uniform(0.10, 0.30)) # 缓慢移动防止检测
             pyautogui.click()
             #pyautogui.moveTo(original_pos, duration=0.1)  # 返回原位
             self.log_signal.emit(f"[操作] 点击 {label}({x},{y})")
