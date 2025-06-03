@@ -43,7 +43,7 @@ BOSS='Boss.png'
 BOSS_region=(1240, 780,200, 40) #区域
 
 def random_delay():
-    time.sleep(random.uniform(0.10, 0.30))
+    time.sleep(0.1)
 
 # 主应用类
 class MacroApp(QWidget):
@@ -415,7 +415,8 @@ class MacroApp(QWidget):
                         if has_dps:
                             self.log_signal.emit("[检测] DPS已存在，按下鼠标")
                         else:
-                            self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")                           
+                            self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
+                            self.card_state = False                         
                         last_dps_state = has_dps
                     elif last_dps_state != has_dps:
                         # 状态发生变化
@@ -615,7 +616,7 @@ class MacroApp(QWidget):
         """
         try:
             #original_pos = pyautogui.position()  # 保存原始位置
-            pyautogui.moveTo(x, y, duration=random.uniform(0.10, 0.30)) # 缓慢移动防止检测
+            pyautogui.moveTo(x, y, duration=0.01) # 缓慢移动防止检测
             pyautogui.click()
             #pyautogui.moveTo(original_pos, duration=0.1)  # 返回原位
             self.log_signal.emit(f"[操作] 点击 {label}({x},{y})")
