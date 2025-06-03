@@ -39,8 +39,9 @@ DPS_IMAGE = 'dps.png'  # DPS检测用图片文件名
 DPS_REGION = (613, 141, 63, 12)  # DPS检测区域(x, y, width, height)
 configuration='configuration.png'
 configuration_region=(850, 760, 200, 40) #区域
-#R5='5.png'
-#R5_region=(944, 432, 21, 6) #区域
+BOSS='Boss.png'
+BOSS_region=(1240, 780,200, 40) #区域
+
 def random_delay():
     time.sleep(random.uniform(0.10, 0.30))
 
@@ -51,6 +52,7 @@ class MacroApp(QWidget):
     def __init__(self):
         """类初始化构造函数"""
         super().__init__()
+        self.card_state = False  # 卡状态标志
         
         # 配置文件路径
         self.config_path = "config.json"
@@ -292,6 +294,7 @@ class MacroApp(QWidget):
     def handle_f11(self):
         """F11键处理：切换自动循环模式"""
         # 停止冲突模式
+        self.card_state = False
         if self.loop_event.is_set():
             self.loop_event.clear()
             self.log_signal.emit("[系统] 已退出DPS检测模式")
@@ -412,7 +415,7 @@ class MacroApp(QWidget):
                         if has_dps:
                             self.log_signal.emit("[检测] DPS已存在，按下鼠标")
                         else:
-                            self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
+                            self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")                           
                         last_dps_state = has_dps
                     elif last_dps_state != has_dps:
                         # 状态发生变化
@@ -427,6 +430,7 @@ class MacroApp(QWidget):
                             pydirectinput.press('r')
                             random_delay()  # 确保换弹稳定
                             pydirectinput.press('r')
+                            self.card_state = False
                         last_dps_state = has_dps
                     
                     # 根据检测结果处理
@@ -561,37 +565,42 @@ class MacroApp(QWidget):
     def execute_sequence(self):
         """执行预定义的操作序列"""
         try:
-            self.log_signal.emit("[操作] 开始执行序列")
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
-            if has_dps:
-                return
-            # 步骤2：发送E键
-            pyautogui.press('e')
-            random_delay()
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
-            if has_dps:
-                return
-            # 步骤3：选择星级
-            star_index = STAR_LEVELS.index(self.cmb_star.findChild(QComboBox).currentText())
-            self.safe_click(590 + star_index * 150, 367, "星级")
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
-            if has_dps:
-                return
-            # 步骤4：选择动作类型
-            type_index = ACTION_TYPES.index(self.cmb_type.findChild(QComboBox).currentText())
-            self.safe_click(630 + type_index * 200, 540, "类型")
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
-            if has_dps:
-                return
-            # 步骤5：确认操作
-            self.safe_click(1326, 804, "确认")
-            has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
-            if has_dps:
-                return
-            self.log_signal.emit("[操作] 序列执行完成")
-            if self.hold_left_btn_check.isChecked():
-                self.log_signal.emit("[操作] 检测到保持左键选项，触发按下")
-                pyautogui.mouseDown(button='left')
+            if self.card_state  is False:
+
+                self.log_signal.emit("[操作] 开始执行序列")
+                has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
+                if has_dps:
+                    return
+                # 步骤2：发送E键
+                pyautogui.press('e')
+                random_delay()
+                has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
+                if has_dps:
+                    return
+                # 步骤3：选择星级
+                star_index = STAR_LEVELS.index(self.cmb_star.findChild(QComboBox).currentText())
+                self.safe_click(590 + star_index * 150, 367, "星级")
+                has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
+                if has_dps:
+                    return
+                # 步骤4：选择动作类型
+                type_index = ACTION_TYPES.index(self.cmb_type.findChild(QComboBox).currentText())
+                self.safe_click(630 + type_index * 200, 540, "类型")
+                has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
+                if has_dps:
+                    return
+                # 步骤5：确认操作
+                BOSS_png = self.check_image(BOSS,BOSS_region,0.6)
+                if BOSS_png:
+                    self.safe_click(1326, 804, "确认")
+                    self.card_state  = True
+                has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)   
+                if has_dps:
+                    return
+                self.log_signal.emit("[操作] 序列执行完成")
+                if self.hold_left_btn_check.isChecked():
+                    self.log_signal.emit("[操作] 检测到保持左键选项，触发按下")
+                    pyautogui.mouseDown(button='left')
             
         except Exception as e:
             self.log_signal.emit(f"[错误] 执行失败: {str(e)}")
