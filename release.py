@@ -92,9 +92,17 @@ class MacroApp(QWidget):
         self.cmb_type = self.create_combobox("动作类型:", ACTION_TYPES, "action_type")
         self.cmb_trigger = self.create_combobox("触发键:", TRIGGER_OPTIONS, "trigger")
         
-        # 保存按钮
+        # 按钮布局
+        button_layout = QHBoxLayout()
         btn_save = QPushButton("保存配置", self)
         btn_save.clicked.connect(self.save_config)
+        
+        btn_restart = QPushButton("重启脚本", self)
+        btn_restart.clicked.connect(self.restart_program)  # 直接绑定到重启函数
+        btn_restart.setStyleSheet("background-color: #ffcc00;")  # 黄色背景突出显示
+        
+        button_layout.addWidget(btn_save)
+        button_layout.addWidget(btn_restart)
         self.hold_left_btn_check = QCheckBox("放一次卡之后保持开火", self)
         self.F11_only_release = QCheckBox("F11纯放卡", self)
         #self.R5 = QCheckBox("检测5换弹", self)
@@ -114,6 +122,7 @@ class MacroApp(QWidget):
         self.log.setMaximumHeight(200)
 
         # 布局管理
+        layout.addLayout(button_layout)  # 添加按钮布局
         layout.addWidget(self.cmb_star)
         layout.addWidget(self.cmb_type)
         layout.addWidget(self.cmb_trigger)
@@ -145,6 +154,14 @@ class MacroApp(QWidget):
         return container
 
     # ------------------------- 信号与监听部分 -------------------------
+    def restart_program(self):
+        """重启当前程序（以管理员权限）"""
+        self.run_event.clear()
+        self.shoot_event.clear()
+        self.loop_event.clear()
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+        sys.exit()
+
     def setup_signals(self):
         """初始化信号连接和输入监听器"""
         # 连接日志信号
