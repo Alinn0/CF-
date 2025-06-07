@@ -385,10 +385,10 @@ class MacroApp(QWidget):
         time.sleep(0.1)   # 确保状态切换稳定
         if not self.shoot_event.is_set():
             self.shoot_event.set()
-            self.log_signal.emit("[系统] 自动开枪模式启动")
             threading.Thread(target=self.Shoot_Mode, daemon=True).start()
         else:
             self.shoot_event.clear()
+            self.log_signal.emit("[系统] 已退出自动开枪模式")
             pyautogui.mouseUp(button='left')
 
     def start_auto_cycle(self):
@@ -416,8 +416,8 @@ class MacroApp(QWidget):
 
     def Shoot_Mode(self):
         """自动开枪模式工作线程"""
+        first_state = True  
         while self.shoot_event.is_set():
-            first_state = True  
             try:
                 pyautogui.mouseDown(button='left')
                 pydirectinput.press('f')
