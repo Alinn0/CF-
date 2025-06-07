@@ -82,6 +82,24 @@ class MacroApp(QWidget):
         self.resize(600, 700)
         self.setWindowTitle("放卡挂机V1.3")
 
+    def setup_listeners(self):
+        """设置键盘和鼠标监听器"""
+        # 如果已有监听器，先停止
+        if hasattr(self, 'key_listener'):
+            self.key_listener.stop()
+        
+        # 初始化键盘监听器
+        self.key_listener = keyboard.Listener(
+            on_press=self.on_key_press,
+            on_release=self.on_key_release
+        )
+        self.key_listener.start()
+        
+        # 按需初始化鼠标监听器
+        self.mouse_listener = None  # 确保初始化为 None
+        if self.config.get("trigger", "").startswith("鼠标"):
+            self.start_mouse_listener()
+
     # ------------------------- UI初始化部分 -------------------------
     def init_ui(self):
         """初始化用户界面"""
@@ -155,12 +173,24 @@ class MacroApp(QWidget):
 
     # ------------------------- 信号与监听部分 -------------------------
     def restart_program(self):
-        """重启当前程序（以管理员权限）"""
-        self.run_event.clear()
-        self.shoot_event.clear()
-        self.loop_event.clear()
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
-        sys.exit()
+        """重新获取键盘和鼠标监听权限"""
+        self.log_signal.emit("[系统] 正在重新获取键盘鼠标监听权限...")
+        
+        # 先停止所有监听器（如果存在）
+        if hasattr(self, 'key_listener') and self.key_listener is not None:
+            self.key_listener.stop()
+        
+        # 安全地停止鼠标监听器（如果存在）
+        if hasattr(self, 'mouse_listener') and self.mouse_listener is not None:
+            self.mouse_listener.stop()
+        
+        # 重新设置监听器
+        self.setup_listeners()
+        
+        # 初始化热键状态
+        self.update_hotkey_state()
+        
+        self.log_signal.emit("[系统] 键盘鼠标监听权限已重新获取，重启完成")
 
     def setup_signals(self):
         """初始化信号连接和输入监听器"""
@@ -284,7 +314,8 @@ class MacroApp(QWidget):
     # ------------------------- 鼠标监听部分 -------------------------
     def start_mouse_listener(self):
         """启动鼠标侧键监听器"""
-        if self.mouse_listener:
+        # 如果已有鼠标监听器，先停止
+        if self.mouse_listener is not None:
             self.mouse_listener.stop()
         
         button = self.parse_mouse_button(self.config.get("trigger"))
@@ -694,10 +725,11 @@ class MacroApp(QWidget):
         self.loop_event.clear()
         self._mouse_left_up(force=True)
         
-        # 停止监听器
-        if self.key_listener:
+        # 安全地停止监听器
+        if hasattr(self, 'key_listener') and self.key_listener is not None:
             self.key_listener.stop()
-        if self.mouse_listener:
+        
+        if hasattr(self, 'mouse_listener') and self.mouse_listener is not None:
             self.mouse_listener.stop()
         
         event.accept()
