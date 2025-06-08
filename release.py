@@ -229,11 +229,8 @@ class MacroApp(QWidget):
             elif key == Key.f12:
                 self.handle_f12()
             elif key == Key.f9:
-                self.handl_f9()
-            
-            # 处理用户配置的触发键
-            self.check_trigger_hotkey(key, pressed=True)
-            
+                self.handl_f9()          
+
         except Exception as e:
             self.log_signal.emit(f"[错误] 按键处理异常: {str(e)}")
 
@@ -269,12 +266,6 @@ class MacroApp(QWidget):
             if key_str == k:
                 self.hotkeys[k] = pressed
 
-        # 检查所有需要按键是否都处于按下状态
-        if all(self.hotkeys.get(k, False) for k in expected_keys):
-            if pressed and not self._exec_lock.locked():
-                self.log_signal.emit(f"[触发] 检测到热键 {trigger}")
-                threading.Thread(target=self.execute_sequence, daemon=True).start()
-            return True
         return False
 
     # 修改update_hotkey_state方法（在信号与监听部分）
@@ -325,6 +316,7 @@ class MacroApp(QWidget):
             if pressed and btn == button:
                 if not self._exec_lock.locked():
                     self.log_signal.emit(f"[触发] 检测到鼠标侧键")
+                    self.card_state = False  # 重置卡状态
                     threading.Thread(target=self.execute_sequence, daemon=True).start()
         
         # 创建并启动监听器
@@ -486,16 +478,6 @@ class MacroApp(QWidget):
                     if has_dps:
                         self.handle_dps_found()
                     else:
-                        # if self.R5.isChecked():
-                        #     # 检测5换弹
-                        #     has_r5 = self.check_image(R5, R5_region, 0.3)
-                        #     if has_r5:
-                        #         self.log_signal.emit("[检测] 执行换弹")
-                        #         pydirectinput.press('r')
-                        #     con_png = self.check_image(configuration, configuration_region, 0.3)
-                        #     if con_png:
-                        #         self.safe_click(960, 785, "确认")
-                        # else:
                         con_png = self.check_image(configuration, configuration_region, 0.3)
                         if con_png:
                             self.safe_click(960, 785, "确认")
