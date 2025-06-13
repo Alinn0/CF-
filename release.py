@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QCheckBox  # 导入复选框控件
+from PyQt5.QtWidgets import QCheckBox   # 导入复选框控件
+from PyQt5.QtWidgets import QLineEdit  # 导入单行输入框控件
 import sys  # 导入系统模块
 import json  # 导入JSON模块用于配置文件读写
 import threading  # 导入线程模块
@@ -40,6 +41,8 @@ class MacroApp(QWidget):
     def __init__(self):
         super().__init__()  # 初始化父类
         self.card_state = False  # 初始化卡状态
+        self.Card_statistic = 0
+        self.Card_statistic_ed = 0
         self.config_path = "config.json"  # 配置文件路径
         self.config = self.load_config()  # 加载配置文件
         self._exec_lock = threading.Lock()  # 初始化线程锁
@@ -76,7 +79,7 @@ class MacroApp(QWidget):
         btn_restart = QPushButton("重启脚本", self)  # 创建重启按钮
         btn_restart.clicked.connect(self.restart_program)  # 绑定重启方法
         btn_restart.setStyleSheet("background-color: #ffcc00;")  # 设置按钮颜色
-        button_layout.addWidget(btn_save)  # 添加保存按钮到布局
+        #button_layout.addWidget(btn_save)  # 添加保存按钮到布局
         button_layout.addWidget(btn_restart)  # 添加重启按钮到布局
         self.hold_left_btn_check = QCheckBox("放一次卡之后保持开火", self)  # 创建保持开火复选框
         self.F11_only_release = QCheckBox("F11纯放卡", self)  # 创建F11纯放卡复选框
@@ -93,6 +96,14 @@ class MacroApp(QWidget):
         layout.addWidget(self.cmb_star)  # 添加星级下拉框
         layout.addWidget(self.cmb_type)  # 添加动作类型下拉框
         layout.addWidget(self.cmb_trigger)  # 添加触发键下拉框
+        stat_layout = QHBoxLayout()
+        lbl_stat = QLabel("放卡数量：")
+        self.Statistics = QLineEdit(self)
+        self.Statistics.setPlaceholderText("请输入放卡数量")
+        self.Statistics.setText("1000")  # 设置默认内容为1000
+        stat_layout.addWidget(lbl_stat)
+        stat_layout.addWidget(self.Statistics)
+        layout.addLayout(stat_layout)
         layout.addWidget(btn_save)  # 添加保存按钮
         layout.addWidget(lbl_tip)  # 添加提示标签
         layout.addWidget(QLabel("操作日志:"))  # 添加日志标签
@@ -113,6 +124,15 @@ class MacroApp(QWidget):
         combo.setStyleSheet("QComboBox { padding: 2px; }")  # 设置下拉框样式
         layout.addWidget(combo)  # 添加下拉框到布局
         return container  # 返回容器
+    
+    def Value_Get(self):
+        value_str = self.Statistics.text()  # 获取文本框内容（字符串）
+        try:
+            value = int(value_str)  # 转换为整数
+        except ValueError:
+            value = 0  # 转换失败时设为0或其他默认值
+        return value  # 返回整数值
+    
 
     def restart_program(self):
         self.log_signal.emit("[系统] 正在重新获取键盘鼠标监听权限...")  # 输出日志
@@ -204,6 +224,7 @@ class MacroApp(QWidget):
                 if not self._exec_lock.locked():
                     self.log_signal.emit(f"[触发] 检测到鼠标侧键")  # 输出触发日志
                     self.card_state = False  # 重置卡状态
+                    self.Card_statistic_ed = 0  # 重置已放卡数量
                     threading.Thread(target=self.execute_sequence, daemon=True).start()  # 启动操作线程
         self.mouse_listener = mouse.Listener(on_click=on_click)  # 创建鼠标监听器
         self.mouse_listener.start()  # 启动鼠标监听器
@@ -216,6 +237,8 @@ class MacroApp(QWidget):
 
     def handle_f11(self):
         self.card_state = False  # 重置卡状态
+        self.Card_statistic= self.Value_Get()  # 获取放卡数量
+        self.Card_statistic_ed = 0 # 设置已放卡数量
         if self.loop_event.is_set():
             self.loop_event.clear()  # 退出DPS检测模式
             self.log_signal.emit("[系统] 已退出DPS检测模式")
@@ -229,6 +252,7 @@ class MacroApp(QWidget):
             self.stop_auto_cycle()  # 停止自动循环
 
     def handle_f12(self):
+        self.Card_statistic = 0  # 卡数量
         if self.run_event.is_set():
             self.run_event.clear()  # 退出自动循环模式
             self.log_signal.emit("[系统] 已退出自动循环模式")
@@ -309,18 +333,21 @@ class MacroApp(QWidget):
                     has_dps = self.check_image(DPS_IMAGE, DPS_REGION, 0.6)  # 检测DPS图片
                     if last_dps_state is None:
                         if has_dps:
-                            self.log_signal.emit("[检测] DPS已存在，按下鼠标")
+                            #self.log_signal.emit("[检测] DPS已存在，按下鼠标")
+                            a=1
                         else:
-                            self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
+                            #self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
+                            a=1
                             self.card_state = False
                         last_dps_state = has_dps
                     elif last_dps_state != has_dps:
                         if has_dps:
-                            self.log_signal.emit("[检测] DPS已存在，按下鼠标")
+                            #self.log_signal.emit("[检测] DPS已存在，按下鼠标")
+                            a=1  #懒得改代码随便让他做点什么e
                         else:
                             pyautogui.mouseUp(button='left')
-                            self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
-                            self.log_signal.emit("执行一次换弹")
+                            #self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
+                            #self.log_signal.emit("执行一次换弹")
                             pydirectinput.press('r')
                             random_delay()
                             pydirectinput.press('r')
@@ -334,29 +361,36 @@ class MacroApp(QWidget):
                         con_png = self.check_image(configuration, configuration_region, 0.3)
                         if con_png:
                             self.safe_click(960, 785, "确认")  # 点击确认
-                        self.handle_no_dps()  # 处理DPS不存在
+                        if self.Card_statistic_ed < self.Card_statistic:
+                            self.handle_no_dps()  # 处理DPS不存在
+                        else:
+                            self.log_signal.emit("[操作] 已放卡数量达到目标，停止循环")
+                            self.stop_auto_cycle()
+                            
             except Exception as e:
                 self.log_signal.emit(f"[错误] 循环异常: {str(e)}")
                 self.stop_auto_cycle()
 
     def detection_loop_worker(self):
-        last_has_dps = None  # 记录上一次DPS状态
+        last_has_dps = False  # 记录上一次DPS状态
         while self.loop_event.is_set():
             try:
                 current_has_dps = self.check_image(DPS_IMAGE, DPS_REGION,0.6)  # 检测DPS图片
                 if current_has_dps != last_has_dps:
                     if current_has_dps:
-                        self.log_signal.emit("DPS检测到，按下鼠标")
+                        #self.log_signal.emit("DPS检测到，按下鼠标")
                         pyautogui.mouseDown(button='left')
                     else:
                         pyautogui.mouseUp(button='left')
-                        self.log_signal.emit("DPS未检测到，抬起鼠标")
-                        self.log_signal.emit("执行一次换弹")
+                        #self.log_signal.emit("DPS未检测到，抬起鼠标")
+                        #self.log_signal.emit("执行一次换弹")
                         pydirectinput.press('r')
                         random_delay()
                         pydirectinput.press('r')
                         random_delay()
                         pydirectinput.press('r')
+                        self.Card_statistic +=1
+                        self.log_signal.emit(f"吃到{self.Card_statistic}张卡")
                     last_has_dps = current_has_dps
                 if not current_has_dps:
                     con_png = self.check_image(configuration, configuration_region,0.3)
@@ -392,7 +426,7 @@ class MacroApp(QWidget):
             try:
                 pyautogui.mouseDown(button='left')  # 按下鼠标左键
                 self.mouse_down.set()  # 设置鼠标按下事件
-                self.log_signal.emit("[操作] 鼠标按下")
+                #self.log_signal.emit("[操作] 鼠标按下")
             except Exception as e:
                 self.log_signal.emit(f"[错误] 按下失败: {str(e)}")
 
@@ -401,7 +435,7 @@ class MacroApp(QWidget):
             try:
                 pyautogui.mouseUp(button='left')  # 释放鼠标左键
                 self.mouse_down.clear()  # 清除鼠标按下事件
-                self.log_signal.emit("[操作] 鼠标释放")
+                #self.log_signal.emit("[操作] 鼠标释放")
             except Exception as e:
                 self.log_signal.emit(f"[错误] 释放失败: {str(e)}")
 
@@ -419,7 +453,7 @@ class MacroApp(QWidget):
     def execute_sequence(self):
         try:
             if self.card_state  is False:
-                self.log_signal.emit("[操作] 开始执行序列")
+                #self.log_signal.emit("[操作] 开始执行序列")
                 has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
                 if has_dps:
                     return
@@ -427,7 +461,7 @@ class MacroApp(QWidget):
                 random_delay()
                 BOSS_png = self.check_image(BOSS,BOSS_region,0.6)
                 if BOSS_png:
-                    self.log_signal.emit("触发召唤面板")
+                    #self.log_signal.emit("触发召唤面板")
                     has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
                     if has_dps:
                         return
@@ -448,15 +482,18 @@ class MacroApp(QWidget):
                         if BOSS_png:
                             self.safe_click(1326, 804, "确认")
                             self.card_state  = True
+                            self.Card_statistic_ed += 1  # 增加已放卡数量
+                            self.log_signal.emit(f"[操作] 放卡完成，当前已放卡数量: {self.Card_statistic_ed}/{self.Card_statistic}")
                     has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
                     if has_dps:
                         return
-                    self.log_signal.emit("[操作] 序列执行完成")
+                    #self.log_signal.emit("[操作] 序列执行完成")
                     if self.hold_left_btn_check.isChecked():
                         self.log_signal.emit("[操作] 检测到保持左键选项，触发按下")
                         pyautogui.mouseDown(button='left')
                 else:
-                    self.log_signal.emit("未触发召唤面板，再次点击E")
+                    #self.log_signal.emit("未触发召唤面板，再次点击E")
+                    a=1
         except Exception as e:
             self.log_signal.emit(f"[错误] 执行失败: {str(e)}")
             self.run_event.clear()
@@ -465,7 +502,7 @@ class MacroApp(QWidget):
         try:
             pyautogui.moveTo(x, y, duration=0.01)  # 移动鼠标到指定坐标
             pyautogui.click()  # 点击鼠标
-            self.log_signal.emit(f"[操作] 点击 {label}({x},{y})")
+            #self.log_signal.emit(f"[操作] 点击 {label}({x},{y})")
         except Exception as e:
             self.log_signal.emit(f"[错误] 点击失败: {str(e)}")
             raise
