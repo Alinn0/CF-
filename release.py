@@ -81,11 +81,9 @@ class MacroApp(QWidget):
         btn_restart.setStyleSheet("background-color: #ffcc00;")  # 设置按钮颜色
         #button_layout.addWidget(btn_save)  # 添加保存按钮到布局
         button_layout.addWidget(btn_restart)  # 添加重启按钮到布局
-        self.hold_left_btn_check = QCheckBox("放一次卡之后保持开火", self)  # 创建保持开火复选框
-        self.F11_only_release = QCheckBox("F11纯放卡", self)  # 创建F11纯放卡复选框
+        self.NotShoot = QCheckBox("F11只插卡不开枪", self)  # 创建保持开火复选框
         checkbox_layout = QHBoxLayout()  # 创建复选框水平布局
-        checkbox_layout.addWidget(self.hold_left_btn_check)  # 添加保持开火复选框
-        checkbox_layout.addWidget(self.F11_only_release)  # 添加F11纯放卡复选框
+        checkbox_layout.addWidget(self.NotShoot)  # 添加保持不开火复选框
         layout.addLayout(checkbox_layout)  # 添加复选框布局到主布局
         lbl_tip = QLabel("触发按键: 触发一次自动放卡\n•F9: 自动开枪模式\n•F11: 自动放卡自动开枪\n•F12: 检测到BOSS出来自动开枪\n ")  # 创建提示标签
         lbl_tip.setStyleSheet("color: #666; font-style: italic; padding: 8px 0;")  # 设置标签样式
@@ -279,7 +277,7 @@ class MacroApp(QWidget):
         else:
             self.shoot_event.clear()  # 停止自动开枪
             self.log_signal.emit("[系统] 已退出自动开枪模式")
-            pyautogui.mouseUp(button='left')  # 释放鼠标左键
+            self._mouse_left_up()  
 
     def start_auto_cycle(self):
         self.run_event.set()  # 设置自动循环事件
@@ -304,7 +302,7 @@ class MacroApp(QWidget):
         first_state = True  # 标记首次启动
         while self.shoot_event.is_set():
             try:
-                pyautogui.mouseDown(button='left')  # 按下鼠标左键
+                self._mouse_left_down() 
                 pydirectinput.press('f')  # 按下F键
                 if first_state:
                     first_state = False
@@ -312,40 +310,17 @@ class MacroApp(QWidget):
             except Exception as e:
                 self.log_signal.emit(f"[错误] 自动开枪异常: {str(e)}")
                 self.shoot_event.clear()
-                pyautogui.mouseUp(button='left')  # 释放鼠标左键
+                self._mouse_left_up()  
     
 
     def auto_cycle_worker(self):
-        last_dps_state = None  # 记录上一次DPS状态
+        last_dps_state = False  # 记录上一次DPS状态
         while self.run_event.is_set():
             try:
-                if self.F11_only_release.isChecked():
-                    self.log_signal.emit("[操作] 纯放卡开始")
-                    pyautogui.press('e')  # 按下E键
-                    random_delay()
-                    star_index = STAR_LEVELS.index(self.cmb_star.findChild(QComboBox).currentText())
-                    self.safe_click(590 + star_index * 150, 367, "星级")  # 点击星级
-                    type_index = ACTION_TYPES.index(self.cmb_type.findChild(QComboBox).currentText())
-                    self.safe_click(630 + type_index * 200, 540, "类型")  # 点击动作类型
-                    self.safe_click(1326, 804, "确认")  # 点击确认
-                    self.log_signal.emit("[操作] 纯放卡执行完成")
-                else:
                     has_dps = self.check_image(DPS_IMAGE, DPS_REGION, 0.6)  # 检测DPS图片
-                    if last_dps_state is None:
-                        if has_dps:
-                            #self.log_signal.emit("[检测] DPS已存在，按下鼠标")
-                            a=1
-                        else:
-                            #self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
-                            a=1
-                            self.card_state = False
-                        last_dps_state = has_dps
-                    elif last_dps_state != has_dps:
-                        if has_dps:
-                            #self.log_signal.emit("[检测] DPS已存在，按下鼠标")
-                            a=1  #懒得改代码随便让他做点什么e
-                        else:
-                            pyautogui.mouseUp(button='left')
+                    if last_dps_state != has_dps:
+                        if has_dps is False:
+                            self._mouse_left_up()   # 释放鼠标左键
                             #self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
                             #self.log_signal.emit("执行一次换弹")
                             pydirectinput.press('r')
@@ -354,11 +329,14 @@ class MacroApp(QWidget):
                             random_delay()
                             pydirectinput.press('r')
                             self.card_state = False
-                        last_dps_state = has_dps
+                            last_dps_state = has_dps
                     if has_dps:
-                        self.handle_dps_found()  # 处理DPS存在
+                        if self.NotShoot.isChecked() is False:
+                            self.handle_dps_found()  # 处理DPS存在
+                        last_dps_state = has_dps
                     else:
-                        con_png = self.check_image(configuration, configuration_region, 0.3)
+                        last_dps_state = has_dps
+                        con_png = self.check_image(configuration, configuration_region, 0.6)
                         if con_png:
                             self.safe_click(960, 785, "确认")  # 点击确认
                         if self.Card_statistic_ed < self.Card_statistic:
@@ -379,9 +357,9 @@ class MacroApp(QWidget):
                 if current_has_dps != last_has_dps:
                     if current_has_dps:
                         #self.log_signal.emit("DPS检测到，按下鼠标")
-                        pyautogui.mouseDown(button='left')
+                        self._mouse_left_down() 
                     else:
-                        pyautogui.mouseUp(button='left')
+                        self._mouse_left_up()  
                         #self.log_signal.emit("DPS未检测到，抬起鼠标")
                         #self.log_signal.emit("执行一次换弹")
                         pydirectinput.press('r')
@@ -488,9 +466,6 @@ class MacroApp(QWidget):
                     if has_dps:
                         return
                     #self.log_signal.emit("[操作] 序列执行完成")
-                    if self.hold_left_btn_check.isChecked():
-                        self.log_signal.emit("[操作] 检测到保持左键选项，触发按下")
-                        pyautogui.mouseDown(button='left')
                 else:
                     #self.log_signal.emit("未触发召唤面板，再次点击E")
                     a=1
