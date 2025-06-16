@@ -15,6 +15,9 @@ from pynput.keyboard import HotKey, Key  # 导入热键和按键类型
 import pyautogui  # 导入pyautogui用于自动化操作
 import pydirectinput  # 导入pydirectinput用于模拟按键
 import random  # 导入随机模块
+import win32gui  # 导入win32gui用于获取窗口信息
+import win32process  # 导入win32process用于进程操作
+
 
 def is_admin():
     try:
@@ -26,11 +29,12 @@ STAR_LEVELS = ["一星", "二星", "三星", "四星", "五星", "六星"]  # �
 ACTION_TYPES = ["第一张", "第二张", "第三张", "第四张", "第五张"]  # 动作类型选项列表
 TRIGGER_OPTIONS = ["未配置", "鼠标侧键1", "鼠标侧键2"]  # 触发键选项列表
 DPS_IMAGE = 'dps.png'  # DPS检测图片文件名
-DPS_REGION = (613, 141, 63, 12)  # DPS检测区域坐标
+DPS_REGION = [394, 90, 45, 19]  # DPS检测区域坐标
 configuration='configuration.png'  # 配置确认图片文件名
-configuration_region=(850, 760, 200, 40)  # 配置确认区域坐标
+configuration_region=[609, 510, 51, 35]  # 配置确认区域坐标
 BOSS='Boss.png'  # BOSS检测图片文件名
-BOSS_region=(1240, 780,200, 40)  # BOSS检测区域坐标
+BOSS_region=[840, 530,140, 30]  # BOSS检测区域坐标
+Game_Title = "穿越火线"  # 游戏标题
 
 def random_delay():
     time.sleep(0.1)  # 随机延迟0.1秒
@@ -41,6 +45,8 @@ class MacroApp(QWidget):
     def __init__(self):
         super().__init__()  # 初始化父类
         self.card_state = False  # 初始化卡状态
+        self.x = 0  # 初始化X坐标
+        self.y = 0
         self.Card_statistic = 0
         self.Card_statistic_ed = 0
         self.config_path = "config.json"  # 配置文件路径
@@ -55,6 +61,21 @@ class MacroApp(QWidget):
         self.setup_signals()  # 初始化信号与监听器
         self.resize(600, 700)  # 设置窗口大小
         self.setWindowTitle("放卡挂机V1.3")  # 设置窗口标题
+        Xy=self.GetGameWindow_Xy()
+        if Xy :
+              self.x= Xy[0]
+              self.y= Xy[1]
+              self.log_signal.emit(f"窗口坐标为：{self.x},{self.y}")
+              self.new_BOSS_region = BOSS_region.copy()  
+              self.new_DPS_region = DPS_REGION.copy()
+              self.new_configuration_region = configuration_region.copy()  
+              self.new_BOSS_region[0]+=self.x  # 调整BOSS区域Y坐标
+              self.new_BOSS_region[1]+=self.y  # 调整BOSS区域Y坐标
+              self.new_DPS_region[0]+=self.x  # 调整DPS区域Y坐标
+              self.new_DPS_region[1]+=self.y  # 调整DPS区域Y坐标
+              self.new_configuration_region[0]+=self.x  # 调整配置区域Y坐标
+              self.new_configuration_region[1]+=self.y  # 调整配置区域Y坐标
+
 
     def setup_listeners(self):
         if hasattr(self, 'key_listener'):
@@ -67,6 +88,7 @@ class MacroApp(QWidget):
         self.mouse_listener = None  # 初始化鼠标监听器为None
         if self.config.get("trigger", "").startswith("鼠标"):
             self.start_mouse_listener()  # 根据配置启动鼠标监听器
+        
 
     def init_ui(self):
         layout = QVBoxLayout()  # 创建垂直布局
@@ -77,10 +99,13 @@ class MacroApp(QWidget):
         btn_save = QPushButton("保存配置", self)  # 创建保存按钮
         btn_save.clicked.connect(self.save_config)  # 绑定保存配置方法
         btn_restart = QPushButton("重启脚本", self)  # 创建重启按钮
+        结束游戏 = QPushButton("结束游戏", self)  # 创建结束按钮
+        结束游戏.clicked.connect(self.endgame)  # 绑定结束游戏方法
         btn_restart.clicked.connect(self.restart_program)  # 绑定重启方法
         btn_restart.setStyleSheet("background-color: #ffcc00;")  # 设置按钮颜色
-        #button_layout.addWidget(btn_save)  # 添加保存按钮到布局
+        结束游戏.setStyleSheet("background-color: #ff6666;")  # 设置结束按钮颜色
         button_layout.addWidget(btn_restart)  # 添加重启按钮到布局
+        button_layout.addWidget(结束游戏)
         self.NotShoot = QCheckBox("F11只插卡不开枪", self)  # 创建保持开火复选框
         checkbox_layout = QHBoxLayout()  # 创建复选框水平布局
         checkbox_layout.addWidget(self.NotShoot)  # 添加保持不开火复选框
@@ -123,6 +148,36 @@ class MacroApp(QWidget):
         layout.addWidget(combo)  # 添加下拉框到布局
         return container  # 返回容器
     
+
+    def GetGameWindow_Xy(self):
+        """获取游戏窗口的坐标和大小"""
+        try:            
+            self.hwnd = win32gui.FindWindow(None, Game_Title)  # 查找游戏窗口句柄
+            if self.hwnd:
+                rect = win32gui.GetWindowRect(self.hwnd)  # 获取窗口矩形区域
+                窗口高度 = rect[3] - rect[1]  # 计算窗口高度
+                c_rect = win32gui.GetClientRect(self.hwnd)  
+                标题高度 = 窗口高度 - c_rect[3]  # 计算标题栏高度
+                #返回客户区坐标
+                rect = list(rect)
+                rect[1] += 标题高度
+                rect = tuple(rect)
+                return rect  # 返回窗口坐标
+            else:
+                self.log_signal.emit("抓取窗口失败，请打开游戏窗口之后点击重启脚本...")  # 输出日志
+                return None  # 如果未找到窗口，返回None
+        except ImportError:
+            return None  # 返回None表示无法获取窗口信息
+    
+    def endgame(self):
+        """通过窗口句柄强制结束游戏进程"""
+        try:
+                _, pid = win32process.GetWindowThreadProcessId(self.hwnd)  # 获取进程ID
+                os.kill(pid, 9)  # 强制结束进程
+                self.log_signal.emit("[系统] 游戏进程已强制结束")  # 输出日志
+        except ImportError:
+            self.log_signal.emit("结束失败")
+
     def Value_Get(self):
         value_str = self.Statistics.text()  # 获取文本框内容（字符串）
         try:
@@ -141,6 +196,20 @@ class MacroApp(QWidget):
         self.setup_listeners()  # 重新设置监听器
         self.update_hotkey_state()  # 更新热键状态
         self.log_signal.emit("[系统] 键盘鼠标监听权限已重新获取，重启完成")  # 输出日志
+        Xy=self.GetGameWindow_Xy()
+        if Xy :
+              self.x= Xy[0]
+              self.y= Xy[1]
+              self.log_signal.emit(f"窗口坐标为：{self.x},{self.y}")
+              self.new_BOSS_region = BOSS_region.copy()  
+              self.new_DPS_region = DPS_REGION.copy()
+              self.new_configuration_region = configuration_region.copy()  
+              self.new_BOSS_region[0]+=self.x  # 调整BOSS区域Y坐标
+              self.new_BOSS_region[1]+=self.y  # 调整BOSS区域Y坐标
+              self.new_DPS_region[0]+=self.x  # 调整DPS区域Y坐标
+              self.new_DPS_region[1]+=self.y  # 调整DPS区域Y坐标
+              self.new_configuration_region[0]+=self.x  # 调整配置区域Y坐标
+              self.new_configuration_region[1]+=self.y  # 调整配置区域Y坐标
 
     def setup_signals(self):
         self.log_signal.connect(self.log.append)  # 连接日志信号到日志框
@@ -317,7 +386,7 @@ class MacroApp(QWidget):
         last_dps_state = False  # 记录上一次DPS状态
         while self.run_event.is_set():
             try:
-                    has_dps = self.check_image(DPS_IMAGE, DPS_REGION, 0.6)  # 检测DPS图片
+                    has_dps = self.check_image(DPS_IMAGE, self.new_DPS_region, 0.6)  # 检测DPS图片
                     if last_dps_state != has_dps:
                         if has_dps is False:
                             self._mouse_left_up()   # 释放鼠标左键
@@ -336,9 +405,9 @@ class MacroApp(QWidget):
                         last_dps_state = has_dps
                     else:
                         last_dps_state = has_dps
-                        con_png = self.check_image(configuration, configuration_region, 0.6)
+                        con_png = self.check_image(configuration, self.new_configuration_region, 0.6)
                         if con_png:
-                            self.safe_click(960, 785, "确认")  # 点击确认
+                            self.safe_click(self.x+643, self.y+533, "确认")  # 点击确认
                         if self.Card_statistic_ed < self.Card_statistic:
                             self.handle_no_dps()  # 处理DPS不存在
                         else:
@@ -353,7 +422,7 @@ class MacroApp(QWidget):
         last_has_dps = False  # 记录上一次DPS状态
         while self.loop_event.is_set():
             try:
-                current_has_dps = self.check_image(DPS_IMAGE, DPS_REGION,0.6)  # 检测DPS图片
+                current_has_dps = self.check_image(DPS_IMAGE, self.new_DPS_region,0.6)  # 检测DPS图片
                 if current_has_dps != last_has_dps:
                     if current_has_dps:
                         #self.log_signal.emit("DPS检测到，按下鼠标")
@@ -371,9 +440,9 @@ class MacroApp(QWidget):
                         self.log_signal.emit(f"吃到{self.Card_statistic}张卡")
                     last_has_dps = current_has_dps
                 if not current_has_dps:
-                    con_png = self.check_image(configuration, configuration_region,0.3)
+                    con_png = self.check_image(configuration, self.new_configuration_region,0.3)
                     if con_png:
-                        self.safe_click(960, 785, "确认")
+                        self.safe_click(self.x+643, self.y+533, "确认")  # 点击确认
             except Exception as e:
                 self.log_signal.emit(f"[错误] 检测循环异常: {str(e)}")
                 self.stop_detection_loop()
@@ -432,37 +501,37 @@ class MacroApp(QWidget):
         try:
             if self.card_state  is False:
                 #self.log_signal.emit("[操作] 开始执行序列")
-                has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
+                has_dps = self.check_image(DPS_IMAGE,self.new_DPS_region,0.3)
                 if has_dps:
                     return
                 pyautogui.press('e')
                 random_delay()
-                BOSS_png = self.check_image(BOSS,BOSS_region,0.6)
+                BOSS_png = self.check_image(BOSS,self.new_BOSS_region,0.6)
                 if BOSS_png:
                     #self.log_signal.emit("触发召唤面板")
-                    has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
+                    has_dps = self.check_image(DPS_IMAGE,self.new_DPS_region,0.3)
                     if has_dps:
                         return
                     star_index = STAR_LEVELS.index(self.cmb_star.findChild(QComboBox).currentText())
-                    self.safe_click(590 + star_index * 150, 367, "星级")
-                    has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
+                    self.safe_click(self.x+380 + star_index * 110, self.y+236, "星级")
+                    has_dps = self.check_image(DPS_IMAGE,self.new_DPS_region,0.3)
                     if has_dps:
                         return
                     type_index = ACTION_TYPES.index(self.cmb_type.findChild(QComboBox).currentText())
-                    self.safe_click(630 + type_index * 200, 540, "类型")
-                    has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
+                    self.safe_click(self.x+400 + type_index * 140, self.y+363, "类型")
+                    has_dps = self.check_image(DPS_IMAGE,self.new_DPS_region,0.3)
                     if has_dps:
                         return
-                    BOSS_png = self.check_image(BOSS,BOSS_region,0.6)
+                    BOSS_png = self.check_image(BOSS,self.new_BOSS_region,0.6)
                     if BOSS_png:
                         time.sleep(0.1)  # 等待0.5秒
-                        BOSS_png = self.check_image(BOSS,BOSS_region,0.6)
+                        BOSS_png = self.check_image(BOSS,self.new_BOSS_region,0.6)
                         if BOSS_png:
-                            self.safe_click(1326, 804, "确认")
+                            self.safe_click(self.x+921, self.y+548, "确认")
                             self.card_state  = True
                             self.Card_statistic_ed += 1  # 增加已放卡数量
                             self.log_signal.emit(f"[操作] 放卡完成，当前已放卡数量: {self.Card_statistic_ed}/{self.Card_statistic}")
-                    has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
+                    has_dps = self.check_image(DPS_IMAGE,self.new_DPS_region,0.3)
                     if has_dps:
                         return
                     #self.log_signal.emit("[操作] 序列执行完成")

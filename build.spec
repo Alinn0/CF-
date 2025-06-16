@@ -32,7 +32,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='Cf_Release',  # 生成的exe名称
+    name='窗口化CF',  # 生成的exe名称
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

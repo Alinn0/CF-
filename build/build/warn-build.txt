@@ -14,7 +14,7 @@ Types if import:
 IMPORTANT: Do NOT post this list to the issue-tracker. Use it as a basis for
             tracking down the missing module yourself. Thanks!
 
-missing module named pwd - imported by posixpath (delayed, conditional, optional), shutil (delayed, optional), tarfile (optional), pathlib (delayed, optional), subprocess (delayed, conditional, optional), http.server (delayed, optional), netrc (delayed, conditional), getpass (delayed), setuptools._distutils.util (delayed, conditional, optional), setuptools._vendor.backports.tarfile (optional), setuptools._distutils.archive_util (optional)
+missing module named pwd - imported by posixpath (delayed, conditional, optional), shutil (delayed, optional), tarfile (optional), pathlib (delayed, optional), subprocess (delayed, conditional, optional), http.server (delayed, optional), netrc (delayed, conditional), getpass (delayed), psutil (optional), setuptools._distutils.util (delayed, conditional, optional), setuptools._vendor.backports.tarfile (optional), setuptools._distutils.archive_util (optional)
 missing module named grp - imported by shutil (delayed, optional), tarfile (optional), pathlib (delayed, optional), subprocess (delayed, conditional, optional), setuptools._vendor.backports.tarfile (optional), setuptools._distutils.archive_util (optional)
 missing module named posix - imported by os (conditional, optional), posixpath (optional), shutil (conditional), importlib._bootstrap_external (conditional)
 missing module named resource - imported by posix (top-level)
@@ -72,7 +72,6 @@ missing module named 'numpy_distutils.fcompiler' - imported by numpy.f2py.diagno
 missing module named 'numpy_distutils.command' - imported by numpy.f2py.diagnose (delayed, conditional, optional)
 missing module named numpy_distutils - imported by numpy.f2py.diagnose (delayed, optional)
 missing module named charset_normalizer - imported by numpy.f2py.crackfortran (optional)
-missing module named psutil - imported by numpy.testing._private.utils (delayed, optional)
 missing module named numpy.random.RandomState - imported by numpy.random (top-level), numpy.random._generator (top-level)
 missing module named threadpoolctl - imported by numpy.lib._utils_impl (delayed, optional)
 missing module named numpy._core.zeros - imported by numpy._core (top-level), numpy.linalg._linalg (top-level), numpy (conditional)
