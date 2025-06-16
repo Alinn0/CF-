@@ -321,6 +321,7 @@ class MacroApp(QWidget):
                     if last_dps_state != has_dps:
                         if has_dps is False:
                             self._mouse_left_up()   # 释放鼠标左键
+                            #pydirectinput.keyUp('p')    # 释放P键
                             #self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
                             #self.log_signal.emit("执行一次换弹")
                             pydirectinput.press('r')
@@ -380,7 +381,8 @@ class MacroApp(QWidget):
 
     def handle_dps_found(self):
         self._mouse_left_down()  # 按下鼠标左键
-        pydirectinput.press('f')  # 按下F键
+        #pydirectinput.keyDown('p')  
+        #pydirectinput.press('f')  # 按下F键
 
     def handle_no_dps(self):
         if self.mouse_down.is_set():
@@ -402,7 +404,8 @@ class MacroApp(QWidget):
     def _mouse_left_down(self):
         if not self.mouse_down.is_set():
             try:
-                pyautogui.mouseDown(button='left')  # 按下鼠标左键
+                #pyautogui.keyDown('p')  # 按下p键
+                pydirectinput.mouseDown(button='left')  # 按下鼠标左键
                 self.mouse_down.set()  # 设置鼠标按下事件
                 #self.log_signal.emit("[操作] 鼠标按下")
             except Exception as e:
@@ -411,7 +414,8 @@ class MacroApp(QWidget):
     def _mouse_left_up(self, force=False):
         if force or self.mouse_down.is_set():
             try:
-                pyautogui.mouseUp(button='left')  # 释放鼠标左键
+                pydirectinput.mouseUp(button='left')  # 释放鼠标左键
+                #pyautogui.keyUp('p')  # 按下p键
                 self.mouse_down.clear()  # 清除鼠标按下事件
                 #self.log_signal.emit("[操作] 鼠标释放")
             except Exception as e:
@@ -475,8 +479,8 @@ class MacroApp(QWidget):
 
     def safe_click(self, x, y, label):
         try:
-            pyautogui.moveTo(x, y, duration=0.01)  # 移动鼠标到指定坐标
-            pyautogui.click()  # 点击鼠标
+            pydirectinput.moveTo(x, y, duration=0.01)  # 移动鼠标到指定坐标
+            pydirectinput.click()  # 点击鼠标
             #self.log_signal.emit(f"[操作] 点击 {label}({x},{y})")
         except Exception as e:
             self.log_signal.emit(f"[错误] 点击失败: {str(e)}")
