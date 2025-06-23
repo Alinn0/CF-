@@ -1,0 +1,85 @@
+# Visual Studio 生成的文件和目录
+*.user
+*.aps
+*.pch
+*.pdb
+*.idb
+*.ipdb
+*.obj
+*.iobj
+*.ilk
+*.exp
+*.log
+*.tlog
+*.lastbuildstate
+*.recipe
+
+# 构建输出目录
+x64/
+Win32/
+Debug/
+Release/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio 临时文件
+.vs/
+*.tmp
+*.temp
+
+# 预编译头文件
+*.pch
+
+# 可执行文件和库文件
+*.exe
+*.dll
+*.lib
+*.pdb
+*.idb
+*.ipdb
+
+# 包文件
+*.pkg
+
+# 资源文件编译输出
+*.res
+
+# 其他临时文件
+*.ncb
+*.suo
+*.cache
+*.cachefile
+*.VC.db
+*.VC.opendb
+
+# IntelliSense 数据库
+*.VC.db
+*.VC.opendb
+ipch/
+
+# 编译器输出
+*.cod
+*.i
+*.s
+
+# Visual Studio 工作区文件
+*.sln.docstates
+
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# NuGet Packages
+packages/
+*.nupkg
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# macOS
+.DS_Store
