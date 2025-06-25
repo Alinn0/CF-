@@ -13,7 +13,7 @@ from pynput import keyboard, mouse  # 导入pynput用于键盘鼠标监听
 from pynput.mouse import Button as MouseButton  # 导入鼠标按钮类型
 from pynput.keyboard import HotKey, Key  # 导入热键和按键类型
 import pyautogui  # 导入pyautogui用于自动化操作
-import pydirectinput  # 导入pydirectinput用于模拟按键
+import pydirectinput  # 导入pyautogui用于模拟按键
 import random  # 导入随机模块
 
 def is_admin():
@@ -303,7 +303,7 @@ class MacroApp(QWidget):
         while self.shoot_event.is_set():
             try:
                 self._mouse_left_down() 
-                pydirectinput.press('f')  # 按下F键
+                pyautogui.press('f')  # 按下F键
                 if first_state:
                     first_state = False
                     self.log_signal.emit("[系统] 自动开枪模式已启动")
@@ -321,7 +321,7 @@ class MacroApp(QWidget):
                     if last_dps_state != has_dps:
                         if has_dps is False:
                             self._mouse_left_up()   # 释放鼠标左键
-                            #pydirectinput.keyUp('p')    # 释放P键
+                            #pyautogui.keyUp('p')    # 释放P键
                             #self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
                             #self.log_signal.emit("执行一次换弹")
                             pydirectinput.press('r')
@@ -340,11 +340,8 @@ class MacroApp(QWidget):
                         con_png = self.check_image(configuration, configuration_region, 0.6)
                         if con_png:
                             self.safe_click(960, 785, "确认")  # 点击确认
-                        if self.Card_statistic_ed < self.Card_statistic:
-                            self.handle_no_dps()  # 处理DPS不存在
-                        else:
-                            self.log_signal.emit("[操作] 已放卡数量达到目标，停止循环")
-                            self.stop_auto_cycle()
+                        self.handle_no_dps()  # 处理DPS不存在
+                        
                             
             except Exception as e:
                 self.log_signal.emit(f"[错误] 循环异常: {str(e)}")
@@ -381,8 +378,8 @@ class MacroApp(QWidget):
 
     def handle_dps_found(self):
         self._mouse_left_down()  # 按下鼠标左键
-        #pydirectinput.keyDown('p')  
-        #pydirectinput.press('f')  # 按下F键
+        #pyautogui.keyDown('p')  
+        #pyautogui.press('f')  # 按下F键
 
     def handle_no_dps(self):
         if self.mouse_down.is_set():
@@ -405,7 +402,7 @@ class MacroApp(QWidget):
         if not self.mouse_down.is_set():
             try:
                 #pyautogui.keyDown('p')  # 按下p键
-                pydirectinput.mouseDown(button='left')  # 按下鼠标左键
+                pyautogui.mouseDown(button='left')  # 按下鼠标左键
                 self.mouse_down.set()  # 设置鼠标按下事件
                 #self.log_signal.emit("[操作] 鼠标按下")
             except Exception as e:
@@ -414,7 +411,7 @@ class MacroApp(QWidget):
     def _mouse_left_up(self, force=False):
         if force or self.mouse_down.is_set():
             try:
-                pydirectinput.mouseUp(button='left')  # 释放鼠标左键
+                pyautogui.mouseUp(button='left')  # 释放鼠标左键
                 #pyautogui.keyUp('p')  # 按下p键
                 self.mouse_down.clear()  # 清除鼠标按下事件
                 #self.log_signal.emit("[操作] 鼠标释放")
@@ -462,25 +459,25 @@ class MacroApp(QWidget):
                         time.sleep(0.1)  # 等待0.5秒
                         BOSS_png = self.check_image(BOSS,BOSS_region,0.6)
                         if BOSS_png:
-                            self.safe_click(1326, 804, "确认")
-                            self.card_state  = True
-                            self.Card_statistic_ed += 1  # 增加已放卡数量
-                            self.log_signal.emit(f"[操作] 放卡完成，当前已放卡数量: {self.Card_statistic_ed}/{self.Card_statistic}")
+                            if self.Card_statistic_ed < self.Card_statistic:
+                                self.safe_click(1326, 804, "确认")
+                                self.card_state  = True
+                                self.Card_statistic_ed += 1  # 增加已放卡数量
+                                self.log_signal.emit(f"[操作] 放卡完成，当前已放卡数量: {self.Card_statistic_ed}/{self.Card_statistic}")
+                            else:
+                                self.log_signal.emit("[操作] 已放卡数量达到目标，停止循环")
+                                self.stop_auto_cycle()
                     has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
                     if has_dps:
                         return
-                    #self.log_signal.emit("[操作] 序列执行完成")
-                else:
-                    #self.log_signal.emit("未触发召唤面板，再次点击E")
-                    a=1
         except Exception as e:
             self.log_signal.emit(f"[错误] 执行失败: {str(e)}")
             self.run_event.clear()
 
     def safe_click(self, x, y, label):
         try:
-            pydirectinput.moveTo(x, y, duration=0.01)  # 移动鼠标到指定坐标
-            pydirectinput.click()  # 点击鼠标
+            pyautogui.moveTo(x, y, duration=0.01)  # 移动鼠标到指定坐标
+            pyautogui.click()  # 点击鼠标
             #self.log_signal.emit(f"[操作] 点击 {label}({x},{y})")
         except Exception as e:
             self.log_signal.emit(f"[错误] 点击失败: {str(e)}")
