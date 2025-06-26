@@ -14,7 +14,8 @@ from pynput.mouse import Button as MouseButton  # 导入鼠标按钮类型
 from pynput.keyboard import HotKey, Key  # 导入热键和按键类型
 import pyautogui  # 导入pyautogui用于自动化操作
 import pydirectinput  # 导入pyautogui用于模拟按键
-import random  # 导入随机模块
+import win32process  # 导入win32process用于进程操作
+import win32gui  # 导入win32gui用于获取窗口信息
 
 def is_admin():
     try:
@@ -31,6 +32,7 @@ configuration='configuration.png'  # 配置确认图片文件名
 configuration_region=(850, 760, 200, 40)  # 配置确认区域坐标
 BOSS='Boss.png'  # BOSS检测图片文件名
 BOSS_region=(1240, 780,200, 40)  # BOSS检测区域坐标
+Game_Title = "穿越火线"  # 游戏标题
 
 def random_delay():
     time.sleep(0.1)  # 随机延迟0.1秒
@@ -43,6 +45,7 @@ class MacroApp(QWidget):
         self.card_state = False  # 初始化卡状态
         self.Card_statistic = 0
         self.Card_statistic_ed = 0
+        self.hwnd = win32gui.FindWindow(None, Game_Title)  # 查找游戏窗口句柄
         self.config_path = "config.json"  # 配置文件路径
         self.config = self.load_config()  # 加载配置文件
         self._exec_lock = threading.Lock()  # 初始化线程锁
@@ -79,8 +82,12 @@ class MacroApp(QWidget):
         btn_restart = QPushButton("重启脚本", self)  # 创建重启按钮
         btn_restart.clicked.connect(self.restart_program)  # 绑定重启方法
         btn_restart.setStyleSheet("background-color: #ffcc00;")  # 设置按钮颜色
+        结束游戏 = QPushButton("结束游戏", self)  # 创建结束按钮
+        结束游戏.clicked.connect(self.endgame)  # 绑定结束游戏方法
+        结束游戏.setStyleSheet("background-color: #ff6666;")  # 设置结束按钮颜色
         #button_layout.addWidget(btn_save)  # 添加保存按钮到布局
         button_layout.addWidget(btn_restart)  # 添加重启按钮到布局
+        button_layout.addWidget(结束游戏)
         self.NotShoot = QCheckBox("F11只插卡不开枪", self)  # 创建保持开火复选框
         checkbox_layout = QHBoxLayout()  # 创建复选框水平布局
         checkbox_layout.addWidget(self.NotShoot)  # 添加保持不开火复选框
@@ -131,6 +138,14 @@ class MacroApp(QWidget):
             value = 0  # 转换失败时设为0或其他默认值
         return value  # 返回整数值
     
+    def endgame(self):
+        """通过窗口句柄强制结束游戏进程"""
+        try:
+                _, pid = win32process.GetWindowThreadProcessId(self.hwnd)  # 获取进程ID
+                os.kill(pid, 9)  # 强制结束进程
+                self.log_signal.emit("[系统] 游戏进程已强制结束")  # 输出日志
+        except ImportError:
+            self.log_signal.emit("结束失败")
 
     def restart_program(self):
         self.log_signal.emit("[系统] 正在重新获取键盘鼠标监听权限...")  # 输出日志
@@ -140,6 +155,7 @@ class MacroApp(QWidget):
             self.mouse_listener.stop()  # 停止鼠标监听器
         self.setup_listeners()  # 重新设置监听器
         self.update_hotkey_state()  # 更新热键状态
+        self.hwnd = win32gui.FindWindow(None, Game_Title)  # 查找游戏窗口句柄
         self.log_signal.emit("[系统] 键盘鼠标监听权限已重新获取，重启完成")  # 输出日志
 
     def setup_signals(self):
