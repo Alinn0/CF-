@@ -14,8 +14,7 @@ from pynput.mouse import Button as MouseButton  # 导入鼠标按钮类型
 from pynput.keyboard import HotKey, Key  # 导入热键和按键类型
 import pyautogui  # 导入pyautogui用于自动化操作
 import pydirectinput  # 导入pyautogui用于模拟按键
-import win32process  # 导入win32process用于进程操作
-import win32gui  # 导入win32gui用于获取窗口信息
+
 
 def is_admin():
     try:
@@ -32,20 +31,19 @@ configuration='configuration.png'  # 配置确认图片文件名
 configuration_region=(850, 760, 200, 40)  # 配置确认区域坐标
 BOSS='Boss.png'  # BOSS检测图片文件名
 BOSS_region=(1240, 780,200, 40)  # BOSS检测区域坐标
-Game_Title = "穿越火线"  # 游戏标题
+sleeptime =0.15
 
 def random_delay():
-    time.sleep(0.1)  # 随机延迟0.1秒
+    time.sleep(sleeptime)  # 随机延迟0.1秒
 
 class MacroApp(QWidget):
     log_signal = pyqtSignal(str)  # 定义日志信号
 
     def __init__(self):
         super().__init__()  # 初始化父类
-        self.card_state = False  # 初始化卡状态
+        self.ClearType = 0  # 清卡
         self.Card_statistic = 0
         self.Card_statistic_ed = 0
-        self.hwnd = win32gui.FindWindow(None, Game_Title)  # 查找游戏窗口句柄
         self.config_path = "config.json"  # 配置文件路径
         self.config = self.load_config()  # 加载配置文件
         self._exec_lock = threading.Lock()  # 初始化线程锁
@@ -57,7 +55,7 @@ class MacroApp(QWidget):
         self.init_ui()  # 初始化界面
         self.setup_signals()  # 初始化信号与监听器
         self.resize(600, 700)  # 设置窗口大小
-        self.setWindowTitle("放卡挂机V1.3")  # 设置窗口标题
+        self.setWindowTitle("放卡挂机")  # 设置窗口标题
 
     def setup_listeners(self):
         if hasattr(self, 'key_listener'):
@@ -74,7 +72,7 @@ class MacroApp(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()  # 创建垂直布局
         self.cmb_star = self.create_combobox("星级选择:", STAR_LEVELS, "star")  # 创建星级下拉框
-        self.cmb_type = self.create_combobox("动作类型:", ACTION_TYPES, "action_type")  # 创建动作类型下拉框
+        self.cmb_type = self.create_combobox("普通模式：第几张/清卡模式：从第几张开始清卡:", ACTION_TYPES, "action_type")  # 创建动作类型下拉框
         self.cmb_trigger = self.create_combobox("触发键:", TRIGGER_OPTIONS, "trigger")  # 创建触发键下拉框
         button_layout = QHBoxLayout()  # 创建水平布局
         btn_save = QPushButton("保存配置", self)  # 创建保存按钮
@@ -82,18 +80,21 @@ class MacroApp(QWidget):
         btn_restart = QPushButton("重启脚本", self)  # 创建重启按钮
         btn_restart.clicked.connect(self.restart_program)  # 绑定重启方法
         btn_restart.setStyleSheet("background-color: #ffcc00;")  # 设置按钮颜色
-        结束游戏 = QPushButton("结束游戏", self)  # 创建结束按钮
-        结束游戏.clicked.connect(self.endgame)  # 绑定结束游戏方法
-        结束游戏.setStyleSheet("background-color: #ff6666;")  # 设置结束按钮颜色
-        #button_layout.addWidget(btn_save)  # 添加保存按钮到布局
         button_layout.addWidget(btn_restart)  # 添加重启按钮到布局
-        button_layout.addWidget(结束游戏)
         self.NotShoot = QCheckBox("F11只插卡不开枪", self)  # 创建保持开火复选框
+        self.清卡模式 = QCheckBox("清卡模式", self)  # 创建保持开火复选框
         checkbox_layout = QHBoxLayout()  # 创建复选框水平布局
         checkbox_layout.addWidget(self.NotShoot)  # 添加保持不开火复选框
+        checkbox_layout.addWidget(self.清卡模式)  # 添加清卡模式复选框
         layout.addLayout(checkbox_layout)  # 添加复选框布局到主布局
-        lbl_tip = QLabel("触发按键: 触发一次自动放卡\n•F9: 自动开枪模式\n•F11: 自动放卡自动开枪\n•F12: 检测到BOSS出来自动开枪\n ")  # 创建提示标签
-        lbl_tip.setStyleSheet("color: #666; font-style: italic; padding: 8px 0;")  # 设置标签样式
+        lbl_tip = QLabel("触发按键: 触发一次自动放卡\n•F9: （只会开枪）自动开枪模式\n•F11: （放卡打BOSS）自动放卡自动开枪\n•F12: （只会打BOSS）检测到BOSS出来自动开枪")  # 创建提示标签
+        lbl_tip.setStyleSheet("color: #666;""font-family: 'SimSun';" "padding: 16px 0;")
+        lbl_tip1 = QLabel(
+        "分辨率：全屏 1920*1080  HUD放大开启\n" \
+        "平常使用上面两个勾勾不用√，打魔礼海勾上只插卡不开枪，触发按键一般不用,用F开头功能键即可\n" \
+        "清卡模式勾上之后第一张完了会自己放第二张，以此类推\n" \
+        "记得解压配置图片，记得管理员运行")  # 创建提示标签
+        lbl_tip1.setStyleSheet("color: #666;""font-family: 'SimSun';" "padding: 16px 0;")
         self.log = QTextEdit()  # 创建日志文本框
         self.log.setReadOnly(True)  # 设置日志只读
         self.log.setMaximumHeight(200)  # 设置日志最大高度
@@ -103,14 +104,21 @@ class MacroApp(QWidget):
         layout.addWidget(self.cmb_trigger)  # 添加触发键下拉框
         stat_layout = QHBoxLayout()
         lbl_stat = QLabel("放卡数量：")
+        lbl_time = QLabel("延时（ms）：")
         self.Statistics = QLineEdit(self)
         self.Statistics.setPlaceholderText("请输入放卡数量")
         self.Statistics.setText("1000")  # 设置默认内容为1000
+        self.times = QLineEdit(self)
+        self.times.setPlaceholderText("请输入延时")
+        self.times.setText("150")  # 设置默认内容为1000
         stat_layout.addWidget(lbl_stat)
         stat_layout.addWidget(self.Statistics)
+        stat_layout.addWidget(lbl_time)
+        stat_layout.addWidget(self.times)
         layout.addLayout(stat_layout)
         layout.addWidget(btn_save)  # 添加保存按钮
         layout.addWidget(lbl_tip)  # 添加提示标签
+        layout.addWidget(lbl_tip1)  # 添加提示标签
         layout.addWidget(QLabel("操作日志:"))  # 添加日志标签
         layout.addWidget(self.log)  # 添加日志文本框
         self.setLayout(layout)  # 设置主布局
@@ -137,17 +145,11 @@ class MacroApp(QWidget):
         except ValueError:
             value = 0  # 转换失败时设为0或其他默认值
         return value  # 返回整数值
-    
-    def endgame(self):
-        """通过窗口句柄强制结束游戏进程"""
-        try:
-                _, pid = win32process.GetWindowThreadProcessId(self.hwnd)  # 获取进程ID
-                os.kill(pid, 9)  # 强制结束进程
-                self.log_signal.emit("[系统] 游戏进程已强制结束")  # 输出日志
-        except ImportError:
-            self.log_signal.emit("结束失败")
 
     def restart_program(self):
+        self.loop_event.clear()
+        self.shoot_event.clear()
+        self.run_event.clear()
         self.log_signal.emit("[系统] 正在重新获取键盘鼠标监听权限...")  # 输出日志
         if hasattr(self, 'key_listener') and self.key_listener is not None:
             self.key_listener.stop()  # 停止键盘监听器
@@ -155,7 +157,6 @@ class MacroApp(QWidget):
             self.mouse_listener.stop()  # 停止鼠标监听器
         self.setup_listeners()  # 重新设置监听器
         self.update_hotkey_state()  # 更新热键状态
-        self.hwnd = win32gui.FindWindow(None, Game_Title)  # 查找游戏窗口句柄
         self.log_signal.emit("[系统] 键盘鼠标监听权限已重新获取，重启完成")  # 输出日志
 
     def setup_signals(self):
@@ -237,7 +238,6 @@ class MacroApp(QWidget):
             if pressed and btn == button:
                 if not self._exec_lock.locked():
                     self.log_signal.emit(f"[触发] 检测到鼠标侧键")  # 输出触发日志
-                    self.card_state = False  # 重置卡状态
                     self.Card_statistic_ed = 0  # 重置已放卡数量
                     threading.Thread(target=self.execute_sequence, daemon=True).start()  # 启动操作线程
         self.mouse_listener = mouse.Listener(on_click=on_click)  # 创建鼠标监听器
@@ -250,7 +250,7 @@ class MacroApp(QWidget):
         }.get(button_str, MouseButton.x1)  # 返回鼠标按钮对象
 
     def handle_f11(self):
-        self.card_state = False  # 重置卡状态
+        self.ClearType=ACTION_TYPES.index(self.cmb_type.findChild(QComboBox).currentText())
         self.Card_statistic= self.Value_Get()  # 获取放卡数量
         self.Card_statistic_ed = 0 # 设置已放卡数量
         if self.loop_event.is_set():
@@ -336,6 +336,8 @@ class MacroApp(QWidget):
                     has_dps = self.check_image(DPS_IMAGE, DPS_REGION, 0.6)  # 检测DPS图片
                     if last_dps_state != has_dps:
                         if has_dps is False:
+                            if self.NotShoot.isChecked() is True:
+                                 pydirectinput.press('enter')
                             self._mouse_left_up()   # 释放鼠标左键
                             #pyautogui.keyUp('p')    # 释放P键
                             #self.log_signal.emit("[检测] DPS不存在，弹起鼠标并且执行放卡")
@@ -345,7 +347,6 @@ class MacroApp(QWidget):
                             pydirectinput.press('r')
                             random_delay()
                             pydirectinput.press('r')
-                            self.card_state = False
                             last_dps_state = has_dps
                     if has_dps:
                         if self.NotShoot.isChecked() is False:
@@ -395,7 +396,7 @@ class MacroApp(QWidget):
     def handle_dps_found(self):
         self._mouse_left_down()  # 按下鼠标左键
         #pyautogui.keyDown('p')  
-        #pyautogui.press('f')  # 按下F键
+        pyautogui.press('f')  # 按下F键
 
     def handle_no_dps(self):
         if self.mouse_down.is_set():
@@ -435,6 +436,7 @@ class MacroApp(QWidget):
                 self.log_signal.emit(f"[错误] 释放失败: {str(e)}")
 
     def check_image(self,Image,Region,confid):
+        #print|(Image)
         try:
             return pyautogui.locateOnScreen(
                 Image,
@@ -447,7 +449,6 @@ class MacroApp(QWidget):
 
     def execute_sequence(self):
         try:
-            if self.card_state  is False:
                 #self.log_signal.emit("[操作] 开始执行序列")
                 has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
                 if has_dps:
@@ -466,7 +467,12 @@ class MacroApp(QWidget):
                     if has_dps:
                         return
                     type_index = ACTION_TYPES.index(self.cmb_type.findChild(QComboBox).currentText())
-                    self.safe_click(630 + type_index * 200, 540, "类型")
+                    #rrprint(type_index)
+                    if self.清卡模式.isChecked() is True:
+                        self.safe_click(630 + self.ClearType * 200, 540, "类型")
+
+                    else:
+                        self.safe_click(630 + type_index * 200, 540, "类型")
                     has_dps = self.check_image(DPS_IMAGE,DPS_REGION,0.3)
                     if has_dps:
                         return
@@ -477,8 +483,16 @@ class MacroApp(QWidget):
                         if BOSS_png:
                             if self.Card_statistic_ed < self.Card_statistic:
                                 self.safe_click(1326, 804, "确认")
-                                self.card_state  = True
+                                if self.清卡模式.isChecked() is True:
+                                    time.sleep(0.1)  # 等待0.5秒
+                                    BOSS_png = self.check_image(BOSS,BOSS_region,0.6)
+                                    if BOSS_png:
+                                        self.ClearType+=1
+                                        self.safe_click(630 + self.ClearType * 200, 540, "类型")
+                                        self.safe_click(1326, 804, "确认")
                                 self.Card_statistic_ed += 1  # 增加已放卡数量
+                                if self.NotShoot.isChecked() is True:
+                                    pydirectinput.press('enter')
                                 self.log_signal.emit(f"[操作] 放卡完成，当前已放卡数量: {self.Card_statistic_ed}/{self.Card_statistic}")
                             else:
                                 self.log_signal.emit("[操作] 已放卡数量达到目标，停止循环")
@@ -500,6 +514,13 @@ class MacroApp(QWidget):
             raise
 
     def save_config(self):
+        global sleeptime
+        value_str = self.times.text()  # 获取文本框内容（字符串）
+        try:
+            value = int(value_str)/1000  # 转换为整数
+        except ValueError:
+            value = 0  # 转换失败时设为0或其他默认值
+        sleeptime=value
         old_trigger = self.config.get("trigger", "")  # 获取旧触发键配置
         self.config = {
             "star": self.cmb_star.findChild(QComboBox).currentText(),
